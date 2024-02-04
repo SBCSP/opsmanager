@@ -79,7 +79,7 @@ resource "proxmox_lxc" "sandboxcsp_org_runner" {
   swap = 2048
   start = true
   onboot = true
-  unprivileged = true
+  # unprivileged = true
   vmid = 298
 
 
@@ -92,6 +92,11 @@ resource "proxmox_lxc" "sandboxcsp_org_runner" {
     name = "eth0"
     bridge = var.network_bridge
     ip = "dhcp"
+  }
+
+  features {
+    nesting = true
+    keyctl = true
   }
 }
 
@@ -132,7 +137,7 @@ resource "proxmox_lxc" "flagship" {
   swap = 2048
   start = true
   onboot = true
-  unprivileged = true
+  unprivileged = false
   vmid = 296
 
   rootfs {
@@ -144,6 +149,11 @@ resource "proxmox_lxc" "flagship" {
     name = "eth0"
     bridge = var.network_bridge
     ip = "dhcp"
+  }
+
+  features {
+    nesting = true
+    keyctl = true
   }
 }
 

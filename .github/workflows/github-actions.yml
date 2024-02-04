@@ -1,0 +1,17 @@
+
+
+name: SandboxCSP Proxmox Backoffice
+
+on:
+    push:
+        branches:
+        - main
+
+jobs:
+    deploy-proxmox-backoffice:
+        name: Deploy Proxmox Backoffice
+        runs-on: ubuntu-latest
+        steps:
+        - name: Checkout
+          uses: actions/checkout@v3
+    

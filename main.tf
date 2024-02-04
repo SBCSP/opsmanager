@@ -157,3 +157,28 @@ resource "proxmox_lxc" "flagship" {
   }
 }
 
+resource "proxmox_lxc" "nextcloud" {
+  target_node = var.target_node
+  hostname = "NEXTCLOUD"
+  ostemplate = "local:vztmpl/debian-12-turnkey-nextcloud_18.0-1_amd64.tar.gz"
+  password = var.global_password
+  cores = 4
+  memory = 4096
+  swap = 512
+  start = true
+  onboot = true
+  unprivileged = true
+  vmid = 295
+
+
+  rootfs {
+    size = "1000G"
+    storage = "local-lvm"
+  }
+
+  network {
+    name = "eth0"
+    bridge = var.network_bridge
+    ip = "dhcp"
+  }
+}

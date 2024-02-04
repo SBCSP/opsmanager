@@ -20,7 +20,6 @@ provider "proxmox" {
 resource "proxmox_lxc" "twingate_ha_1" {
   target_node = "pve"
   hostname = "TWINGATE-HA-1"
-  description = "Twingate Connector 1 for SandboxCSP"
   ostemplate = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
   password = "890*()iopIOP890"
   cores = 2
@@ -47,7 +46,6 @@ resource "proxmox_lxc" "twingate_ha_1" {
 resource "proxmox_lxc" "twingate_ha_2" {
   target_node = "pve"
   hostname = "TWINGATE-HA-2"
-  description = "Twingate Connector 2 for SandboxCSP"
   ostemplate = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
   password = "890*()iopIOP890"
   cores = 2
@@ -74,7 +72,6 @@ resource "proxmox_lxc" "twingate_ha_2" {
 resource "proxmox_lxc" "sandboxcsp_org_runner" {
   target_node = "pve"
   hostname = "SANDBOXCSP-ORG-RUNNER"
-  description = "SandboxCSP Organizational Runner"
   ostemplate = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
   password = "890*()iopIOP890"
   cores = 8
@@ -101,7 +98,6 @@ resource "proxmox_lxc" "sandboxcsp_org_runner" {
 resource "proxmox_lxc" "sqlbox" {
   target_node = "pve"
   hostname = "SQLBOX"
-  description = "SQLBox for SandboxCSP"
   ostemplate = "local:vztmpl/debian-12-turnkey-mysql_18.0-1_amd64.tar.gz"
   password = "890*()iopIOP890"
   cores = 8

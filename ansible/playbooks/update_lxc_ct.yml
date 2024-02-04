@@ -1,0 +1,24 @@
+---
+- name: Update and upgrade packages on Twingate hosts
+  hosts: all
+
+  tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+      register: update_cache_result
+
+    - name: Upgrade all packages
+      apt:
+        upgrade: yes
+        autoremove: yes
+        autoclean: yes
+      register: upgrade_result
+
+    - name: Display updated packages
+      debug:
+        var: update_cache_result.changed
+
+    - name: Display upgraded packages
+      debug:
+        var: upgrade_result.changed

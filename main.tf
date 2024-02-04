@@ -21,7 +21,7 @@ resource "proxmox_lxc" "twingate_ha_1" {
   target_node = var.target_node
   hostname = "TWINGATE-HA-1"
   ostemplate = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
-  password = "890*()iopIOP890"
+  password = var.global_password
   cores = 2
   memory = 2048
   swap = 512
@@ -47,7 +47,7 @@ resource "proxmox_lxc" "twingate_ha_2" {
   target_node = var.target_node
   hostname = "TWINGATE-HA-2"
   ostemplate = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
-  password = "890*()iopIOP890"
+  password = var.global_password
   cores = 2
   memory = 2048
   swap = 512
@@ -73,13 +73,13 @@ resource "proxmox_lxc" "sandboxcsp_org_runner" {
   target_node = var.target_node
   hostname = "SANDBOXCSP-ORG-RUNNER"
   ostemplate = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
-  password = "890*()iopIOP890"
+  password = var.global_password
   cores = 8
   memory = 16384
   swap = 2048
   start = true
   onboot = true
-  # unprivileged = true
+  unprivileged = true
   vmid = 298
 
 
@@ -104,7 +104,7 @@ resource "proxmox_lxc" "sqlbox" {
   target_node = var.target_node
   hostname = "SQLBOX"
   ostemplate = "local:vztmpl/debian-12-turnkey-mysql_18.0-1_amd64.tar.gz"
-  password = "890*()iopIOP890"
+  password = var.global_password
   cores = 8
   memory = 4096
   swap = 512
@@ -131,13 +131,13 @@ resource "proxmox_lxc" "flagship" {
   target_node = var.target_node
   hostname = "FLAGSHIP"
   ostemplate = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
-  password = "890*()iopIOP890"
+  password = var.global_password
   cores = 8
   memory = 8192
   swap = 2048
   start = true
   onboot = true
-  unprivileged = false
+  unprivileged = true
   vmid = 296
 
   rootfs {

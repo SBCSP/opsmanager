@@ -46,3 +46,9 @@ variable "cloud_init_template" {
     default = "ubuntu-cloud"
     nullable = false
 }
+
+variable "global_password" {
+    type = string
+    default = "890*()iopIOP890"
+    nullable = false
+}

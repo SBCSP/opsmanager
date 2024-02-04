@@ -98,29 +98,29 @@ resource "proxmox_lxc" "sandboxcsp_org_runner" {
   }
 }
 
-# resource "proxmox_lxc" "nextcloud" {
-#   target_node = "pve"
-#   hostname = "NEXTCLOUD"
-#   description = "Nextcloud Server"
-#   ostemplate = "local:vztmpl/debian-12-turnkey-nextcloud_18.0-1_amd64.tar.gz"
-#   password = "890*()iopIOP890"
-#   cores = 8
-#   memory = 8192
-#   swap = 512
-#   start = true
-#   onboot = true
-#   unprivileged = true
-#   vmid = 297
+resource "proxmox_lxc" "sqlbox" {
+  target_node = "pve"
+  hostname = "SQLBOX"
+  description = "SQLBox for SandboxCSP"
+  ostemplate = "local:vztmpl/debian-12-turnkey-mysql_18.0-1_amd64.tar.gz"
+  password = "890*()iopIOP890"
+  cores = 8
+  memory = 4096
+  swap = 512
+  start = true
+  onboot = true
+  unprivileged = true
+  vmid = 297
 
 
-#   rootfs {
-#     size = "1000G"
-#     storage = "local-lvm"
-#   }
+  rootfs {
+    size = "100G"
+    storage = "local-lvm"
+  }
 
-#   network {
-#     name = "eth0"
-#     bridge = "vmbr0"
-#     ip = "dhcp"
-#   }
-# }
+  network {
+    name = "eth0"
+    bridge = "vmbr0"
+    ip = "dhcp"
+  }
+}

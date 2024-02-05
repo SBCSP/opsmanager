@@ -32,3 +32,15 @@ applications:
   hosts:
     flagship:
       ansible_host: 192.168.0.38
+
+k8servers:
+  vars:
+    ansible_user: configman
+    ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+  hosts:
+    k8s-master-1:
+      ansible_host: 192.168.0.213
+    k8s-worker-2:
+      ansible_host: 192.168.0.179
+    k8s-worker-3:
+      ansible_host: 192.168.0.199

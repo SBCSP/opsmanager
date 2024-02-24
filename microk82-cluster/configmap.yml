@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kronosys-config
+  namespace: default
+data:
+  CLIENT_ID: "fa288d4c-9edc-4c80-9448-6a5ecc3655a7"  # Azure AD App Registration client id
+  CLIENT_SECRET: "i48Q~RXtJTBfvNk~sieDS6tDo8UthzBFbZRZaar" # Azure AD App Registration client secret
+  AUTHORITY: "https://login.microsoftonline.com/dd4e0130-b295-4ac1-8901-f4dafec5c7fc" # Azure AD Tenant endpoint
+  REDIRECT_FORCE: "http://localhost:5000/authorized"
+  MONGODB_URI: "mongodb://192.168.0.63:27017/"
+  DATABASE_NAME: "kronosys"

@@ -2,7 +2,7 @@
 terraform {
   required_providers {
     proxmox = {
-      source  = "Telmate/proxmox"
+      source  = "telmate/proxmox"
       version = "3.0.1-rc1"
     }
   }
@@ -216,34 +216,48 @@ resource "proxmox_lxc" "piehole" {
   }
 }
 
-resource "proxmox_lxc" "home_page" {
-  target_node  = var.target_node
-  hostname     = "HOME-PAGE"
-  ostemplate   = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
-  password     = var.global_password
-  cores        = 22
-  memory       = 4096
-  swap         = 512
-  start        = true
-  onboot       = true
-  unprivileged = true
-  vmid         = 199
-  ssh_public_keys = var.ssh_pub_key
+# resource "proxmox_lxc" "home_page" {
+#   target_node  = var.target_node
+#   hostname     = "HOME-PAGE"
+#   ostemplate   = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
+#   password     = var.global_password
+#   cores        = 22
+#   memory       = 4096
+#   swap         = 512
+#   start        = true
+#   onboot       = true
+#   unprivileged = true
+#   vmid         = 199
+#   ssh_public_keys = var.ssh_pub_key
 
-  rootfs {
-    size    = "25G"
-    storage = var.local_storage
-  }
+#   rootfs {
+#     size    = "25G"
+#     storage = var.local_storage
+#   }
 
-  network {
-    name   = var.eth0_interface
-    bridge = var.network_bridge
-    ip     = "dhcp"
-    gw     = var.piehole_dns
-  }
+#   network {
+#     name   = var.eth0_interface
+#     bridge = var.network_bridge
+#     ip     = "dhcp"
+#     gw     = var.piehole_dns
+#   }
 
-  features {
-    nesting = true
-    keyctl  = true
-  }
+#   features {
+#     nesting = true
+#     keyctl  = true
+#   }
+# }
+
+resource "proxmox_vm_qemu" "swarm_docker" {
+  target_node = var.target_node
+  name        = "SWARM-DOCKER"
+  iso = "local:iso/ubuntu-22.04.3-live-server-amd64.iso"
+  qemu_os = "l26"
+  os_type = "ubuntu"
+  sockets = 4
+  cores = 8
+  memory = 16384
+  vmid = 119
+  
+  ipconfig0 = "dhcp"
 }

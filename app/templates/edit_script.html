@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Script{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-4">
+    <h1 class="text-2xl font-semibold text-gray-700 mb-4">Edit Script: {{ script_name }}</h1>
+    <form action="{{ url_for('edit_script', script_name=script_name) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="text" name="new_script_name" value="{{ script_name }}" class="w-full mb-2 px-3 py-2 text-gray-700 border rounded-lg focus:outline-none" required>
+        <textarea name="script_content" rows="20" class="w-full mb-2 px-3 py-2 text-gray-700 border rounded-lg focus:outline-none" style="height: 300px;" required>{{ script_content }}</textarea>
+        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            Save Changes
+        </button>
+    </form>
+</div>
+{% endblock %}

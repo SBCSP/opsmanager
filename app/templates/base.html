@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MH BackOffice{% endblock %}</title>
+    <!-- Include Tailwind CSS from CDN for simplicity -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <!-- Or you can use your local Tailwind CSS file if you've set up Tailwind with your build process -->
+    <!-- <link href="{{ url_for('static', filename='css/tailwind.css') }}" rel="stylesheet"> -->
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-gray-100">
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex justify-between">
+                <div class="flex space-x-7">
+                    <div>
+                        <!-- Website Logo -->
+                        <a href="{{ url_for('dashboard') }}" class="flex items-center py-4 px-2">
+                            <span class="font-semibold text-gray-500 text-lg">NodeManager</span>
+                        </a>
+                    </div>
+                    <!-- Primary Navbar items -->
+                    <div class="hidden md:flex items-center space-x-1">
+                        <a href="{{ url_for('dashboard') }}" class="py-4 px-2 text-gray-500 font-semibold hover:text-green-500 transition duration-300">Dashboard</a>
+                        <a href="{{ url_for('servers') }}" class="py-4 px-2 text-gray-500 font-semibold hover:text-green-500 transition duration-300">Servers</a>
+                        <a href="{{ url_for('scripts') }}" class="py-4 px-2 text-gray-500 font-semibold hover:text-green-500 transition duration-300">Scripts</a>
+                        <a href="{{ url_for('playbooks') }}" class="py-4 px-2 text-gray-500 font-semibold hover:text-green-500 transition duration-300">Playbooks</a>
+                        <a href="{{ url_for('active_terminal') }}" class="py-4 px-2 text-gray-500 font-semibold hover:text-green-500 transition duration-300">Terminal</a>
+                    </div>
+                </div>
+                <!-- Secondary Navbar items -->
+                <div class="hidden md:flex items-center space-x-3 ">
+                    <a href="#" class="py-2 px-2 font-medium text-gray-500 rounded hover:bg-green-500 hover:text-white transition duration-300">Log In</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto px-4 py-4">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
+                    {% for message in messages %}
+                        <span class="block sm:inline">{{ message }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Content -->
+    <div class="py-6">
+        {% block content %}
+        <!-- Content goes here -->
+        {% endblock %}
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white shadow-lg">
+        <div class="max-w-6xl mx-auto px-4 py-6">
+            <div class="text-center text-gray-500">© 2023 NodeManager</div>
+        </div>
+    </footer>
+
+    <!-- Optional JavaScript -->
+    <!-- Your custom JavaScript here -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>

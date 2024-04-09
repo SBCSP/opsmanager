@@ -1,0 +1,32 @@
+---
+- name: Check for available package updates
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+      register: update_cache
+
+    - name: Check for upgradable packages
+      ansible.builtin.shell: apt list --upgradable
+      changed_when: false
+      register: upgradable_packages
+
+    - name: Create JSON content
+      set_fact:
+        json_content: "{{ upgradable_packages.stdout_lines | to_nice_json }}"
+      when: upgradable_packages.stdout_lines is defined and upgradable_packages.stdout_lines | length > 0
+
+    - name: Write JSON content to file
+      ansible.builtin.copy:
+        content: "{{ json_content }}"
+        dest: "/tmp/upgradable_packages_{{ ansible_hostname }}_{{ ansible_date_time.date }}.json"
+      when: json_content is defined
+
+    - name: Fetch JSON file to local control host
+      ansible.builtin.fetch:
+        src: "/tmp/upgradable_packages_{{ ansible_hostname }}_{{ ansible_date_time.date }}.json"
+        dest: "./upgradable_packages/"
+        flat: yes
+      when: json_content is defined

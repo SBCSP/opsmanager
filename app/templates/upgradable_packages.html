@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Upgradable Packages{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4">
+    <h1 class="text-2xl font-semibold text-gray-700 mb-4">Upgradable Packages</h1>
+    {% for package_file, content in package_data.items() %}
+        <div class="mb-2">
+            <button onclick="toggleDropdown('{{ package_file }}')" class="w-full text-left bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                {{ package_file }} <i class="fas fa-chevron-down float-right mt-1"></i>
+            </button>
+            <div id="{{ package_file }}" class="hidden w-full bg-gray-100 p-2 rounded border">
+                <pre>{{ content }}</pre>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<script>
+    function toggleDropdown(packageFileName) {
+        var contentDiv = document.getElementById(packageFileName);
+        contentDiv.classList.toggle('hidden');
+    }
+</script>
+{% endblock %}

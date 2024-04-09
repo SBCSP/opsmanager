@@ -1,0 +1,15 @@
+---
+- name: Install unzip on Debian servers
+  hosts: all
+  become: yes  # Use sudo to elevate privileges
+
+  tasks:
+    - name: Update APT package cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600  # Update the cache if it's older than 1 hour
+
+    - name: Install unzip
+      ansible.builtin.apt:
+        name: unzip
+        state: present

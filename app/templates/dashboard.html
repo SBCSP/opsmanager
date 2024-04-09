@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-4">
+    <h1 class="text-2xl font-semibold text-gray-700 mb-4">Dashboard</h1>
+    <div class="grid grid-cols-3 gap-4">
+        <div class="p-4 shadow rounded bg-white">
+            <h2 class="text-lg font-semibold text-gray-600">Total Servers</h2>
+            <p class="text-3xl">{{ server_count }}</p>
+        </div>
+        <div class="p-4 shadow rounded bg-white">
+            <h2 class="text-lg font-semibold text-gray-600">Total Scripts</h2>
+            <p class="text-3xl">{{ script_count }}</p>
+        </div>
+        <div class="p-4 shadow rounded bg-white">
+            <h2 class="text-lg font-semibold text-gray-600">Total Playbooks</h2>
+            <p class="text-3xl">{{ playbook_count }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

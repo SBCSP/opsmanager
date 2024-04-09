@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Servers{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4">
+    <!-- Header with Servers and Edit Inventory button on the same line -->
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-semibold text-gray-700">Servers</h1>
+        <a href="{{ url_for('upgradable_packages') }}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mr-2">
+            Upgradable Packages
+        </a>
+        <form action="{{ url_for('edit_inventory') }}">
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Edit Inventory
+            </button>
+        </form>
+    </div>
+    
+    <!-- Server groups and counts in a table -->
+    <table class="min-w-full table-auto">
+        <thead class="bg-gray-200">
+            <tr>
+                <th class="px-4 py-2 text-left">Group</th>
+                <th class="px-4 py-2 text-left">Hosts</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for group, count in server_groups.items() %}
+            <tr class="border-b">
+                <td class="px-4 py-2">{{ group }}</td>
+                <td class="px-4 py-2">{{ count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

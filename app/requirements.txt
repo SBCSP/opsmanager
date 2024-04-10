@@ -2,3 +2,14 @@ flask
 Flask-WTF
 flask-socketio
 paramiko
+SQLAlchemy
+flask-sqlalchemy
+flask-migrate
+python-dotenv
+flask-login 
+flask-bcrypt
+Flask-Session
+werkzeug
+requests
+identity
+msal

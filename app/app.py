@@ -8,14 +8,34 @@ from collections import defaultdict
 import os
 from werkzeug.utils import secure_filename
 from flask import flash
+from dotenv import load_dotenv
+from azure_auth import login, authorized, logout, login_required
+import msal
+
+load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'kjhn08t787trb086f0b86fr'
+app.secret_key = os.getenv('SECRET_KEY')
 csrf = CSRFProtect(app)
 socketio = SocketIO(app)
 
+
+# Load Azure AD app registration details
+@app.route("/login")
+def login_route():
+    return login()
+
+@app.route("/authorized")
+def authorized_route():
+    return authorized()
+
+@app.route("/logout")
+def logout_route():
+    return logout()
+
 # Dashboard route
 @app.route('/')
+@login_required
 def dashboard():
     # Count servers from the inventory file
     inventory_file_path = './inventory.ini'
@@ -37,6 +57,7 @@ def dashboard():
     return render_template('dashboard.html', server_count=server_count, script_count=script_count, playbook_count=playbook_count)
 
 @app.route('/active_terminal')
+@login_required
 def active_terminal():
     return render_template('active_terminal.html')
 
@@ -49,6 +70,7 @@ def handle_execute_command(message):
     emit('command_output', {'output': output})
     
 @app.route('/servers')
+@login_required
 def servers():
     inventory_file_path = './inventory.ini'
     parser = configparser.ConfigParser()
@@ -63,6 +85,7 @@ def servers():
     return render_template('servers.html', server_groups=server_groups)
 
 @app.route('/edit_inventory', methods=['GET', 'POST'])
+@login_required
 def edit_inventory():
     inventory_file_path = './inventory.ini'
     
@@ -79,6 +102,7 @@ def edit_inventory():
     return render_template('edit_inventory.html', content=content, csrf_token=csrf_token)
 
 @app.route('/upgradable_packages')
+@login_required
 def upgradable_packages():
     upgradable_packages_folder = './playbooks/upgradable_packages'
     package_files = os.listdir(upgradable_packages_folder)
@@ -92,6 +116,7 @@ def upgradable_packages():
     return render_template('upgradable_packages.html', package_data=package_data)
 
 @app.route('/scripts')
+@login_required
 def scripts():
     scripts_folder = './scripts'
     script_files = os.listdir(scripts_folder)
@@ -124,6 +149,7 @@ def handle_execute_script(message):
     socketio.start_background_task(generate)
 
 @app.route('/create_script', methods=['GET', 'POST'])
+@login_required
 def create_script():
     if request.method == 'POST':
         script_name = request.form['script_name']
@@ -147,6 +173,7 @@ def create_script():
     return render_template('create_script.html', csrf_token=csrf_token)
 
 @app.route('/edit_script/<script_name>', methods=['GET', 'POST'])
+@login_required
 def edit_script(script_name):
     scripts_folder = './scripts'
     original_script_path = os.path.join(scripts_folder, secure_filename(script_name))
@@ -173,6 +200,7 @@ def edit_script(script_name):
     return render_template('edit_script.html', script_name=script_name, script_content=script_content, csrf_token=csrf_token)
 
 @app.route('/playbooks')
+@login_required
 def playbooks():
     playbooks_folder = './playbooks'
     playbook_files = os.listdir(playbooks_folder)
@@ -205,6 +233,7 @@ def handle_execute_playbook(message):
     socketio.start_background_task(generate)
 
 @app.route('/create_playbook', methods=['GET', 'POST'])
+@login_required
 def create_playbook():
     if request.method == 'POST':
         playbook_name = request.form['playbook_name']
@@ -228,6 +257,7 @@ def create_playbook():
     return render_template('create_playbook.html', csrf_token=csrf_token)
 
 @app.route('/edit_playbook/<playbook_name>', methods=['GET', 'POST'])
+@login_required
 def edit_playbook(playbook_name):
     playbooks_folder = './playbooks'
     original_playbook_path = os.path.join(playbooks_folder, secure_filename(playbook_name))
@@ -254,4 +284,4 @@ def edit_playbook(playbook_name):
     return render_template('edit_playbook.html', playbook_name=playbook_name, playbook_content=playbook_content, csrf_token=csrf_token)
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', debug=True)
+    socketio.run(app, host='0.0.0.0', debug=True, port=5000)

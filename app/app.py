@@ -284,4 +284,4 @@ def edit_playbook(playbook_name):
     return render_template('edit_playbook.html', playbook_name=playbook_name, playbook_content=playbook_content, csrf_token=csrf_token)
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', debug=True, port=5000)
+    socketio.run(app, host='0.0.0.0', debug=True, port=5000, allow_unsafe_werkzeug=True)

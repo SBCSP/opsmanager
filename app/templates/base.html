@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}MH BackOffice{% endblock %}</title>
+    <title>{% block title %}{% endblock %}</title>
     <!-- Include Tailwind CSS from CDN for simplicity -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <!-- Or you can use your local Tailwind CSS file if you've set up Tailwind with your build process -->
     <!-- <link href="{{ url_for('static', filename='css/tailwind.css') }}" rel="stylesheet"> -->
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='nodemanagerlogo.png') }}">
     {% block head %}{% endblock %}
 </head>
 <body class="bg-gray-100">
@@ -21,6 +23,7 @@
                     <div>
                         <!-- Website Logo -->
                         <a href="{{ url_for('dashboard') }}" class="flex items-center py-4 px-2">
+                            <img src="{{ url_for('static', filename='nodemanagerlogo.png') }}" alt="Logo" class="h-8 w-auto">
                             <span class="font-semibold text-gray-500 text-lg">NodeManager</span>
                         </a>
                     </div>

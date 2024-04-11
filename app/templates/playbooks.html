@@ -4,8 +4,13 @@
 
 {% block content %}
 <div class="max-w-6xl mx-auto px-4 py-4">
-    <h1 class="text-2xl font-semibold text-gray-700 mb-4">Playbooks</h1>
-    <div class="flex justify-between items-center mb-4">
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center">
+            <img src="{{ url_for('static', filename='playbookslogo.png') }}" alt="Logo" class="h-12 w-auto mr-2">
+            <h1 class="text-2xl font-semibold text-gray-700">
+                Playbooks
+            </h1>
+        </div>
         <form action="{{ url_for('create_playbook') }}">
             <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                 Create Playbook

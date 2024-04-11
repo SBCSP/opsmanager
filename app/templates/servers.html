@@ -6,7 +6,12 @@
 <div class="max-w-6xl mx-auto px-4">
     <!-- Header with Servers and Edit Inventory button on the same line -->
     <div class="flex justify-between items-center mb-4">
-        <h1 class="text-2xl font-semibold text-gray-700">Servers</h1>
+        <div class="flex items-center">
+            <img src="{{ url_for('static', filename='serverslogo.png') }}" alt="Logo" class="h-12 w-auto mr-2">
+            <h1 class="text-2xl font-semibold text-gray-700">
+                Servers
+            </h1>
+        </div>
         <a href="{{ url_for('upgradable_packages') }}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mr-2">
             Upgradable Packages
         </a>

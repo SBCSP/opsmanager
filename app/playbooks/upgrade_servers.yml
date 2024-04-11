@@ -1,8 +1,17 @@
 ---
-- name: Check for available package updates
+- name: Upgrade all packages on Ubuntu servers
   hosts: all
   become: yes
   tasks:
+    - name: Update and Upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: yes
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+      register: update_cache
+
     - name: Update apt cache
       ansible.builtin.apt:
         update_cache: yes

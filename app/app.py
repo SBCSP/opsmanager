@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 from flask_socketio import SocketIO, emit
 import subprocess
 from flask_wtf import CSRFProtect
@@ -19,6 +19,7 @@ app.secret_key = os.getenv('SECRET_KEY')
 csrf = CSRFProtect(app)
 socketio = SocketIO(app)
 
+DELETE_PLAYBOOK_PASSPHRASE = os.getenv('DELETE_PLAYBOOK_PASSPHRASE')
 
 # Load Azure AD app registration details
 @app.route("/login")
@@ -54,7 +55,72 @@ def dashboard():
     playbook_files = os.listdir(playbooks_folder)
     playbook_count = len(playbook_files)
 
-    return render_template('dashboard.html', server_count=server_count, script_count=script_count, playbook_count=playbook_count)
+    host_ping_results = []
+
+    # Define the path to the host_pings.json file
+    host_pings_file_path = './static/host_ping/host_pings.json'
+
+    # Read the host_pings.json file
+    try:
+        with open(host_pings_file_path, 'r') as file:
+            # Read the lines in the file
+            lines = file.readlines()
+
+            # Process each line to extract host information
+            for line in lines:
+                # Split the line on the pipe character to separate the host from the result
+                parts = line.split(' | ')
+                if len(parts) == 2:
+                    hostname = parts[0].strip()
+                    status_info = parts[1].strip()
+
+                    # Determine the status based on the presence of 'SUCCESS' or 'FAILED'
+                    status = 'Success' if 'SUCCESS' in status_info else 'Failed'
+
+                    # Add the host information to the list
+                    host_ping_results.append({
+                        'hostname': hostname,
+                        'status': status
+                    })
+
+    except FileNotFoundError:
+        flash('Host pings file not found.')
+        host_ping_results = []
+
+    return render_template('dashboard.html', server_count=server_count,
+                           script_count=script_count, playbook_count=playbook_count,
+                           host_ping_results=host_ping_results)
+
+@app.route('/execute_ping', methods=['POST'])
+def execute_ping():
+    inventory_file_path = '/root/pve.backoffice/app/inventory.ini'
+    host_ping_dir = '/root/pve.backoffice/app/static/host_ping'
+    
+    # Ensure the host_ping directory exists
+    os.makedirs(host_ping_dir, exist_ok=True)
+    
+    # Define the command to run with the absolute path to the inventory file
+    command = ['ansible', 'all', '-m', 'ping', '-i', inventory_file_path]
+    
+    # Run the command and capture the output
+    process = subprocess.run(command, capture_output=True, text=True)
+    
+    # Define the path to the output file
+    output_file_path = os.path.join(host_ping_dir, 'host_pings.json')
+    
+    # Write the output to the file
+    with open(output_file_path, 'w') as output_file:
+        output_file.write(process.stdout)
+    
+    # Check if there were any unreachable hosts
+    if process.returncode != 0:
+        # Log the stderr for debugging
+        app.logger.error(f"Ansible ping command had unreachable hosts: {process.stderr}")
+        flash('Ping execution complete with some unreachable hosts.')
+    else:
+        flash('Ping execution successful.')
+    
+    return redirect(url_for('dashboard'))
 
 @app.route('/active_terminal')
 @login_required
@@ -204,33 +270,68 @@ def edit_script(script_name):
 def playbooks():
     playbooks_folder = './playbooks'
     playbook_files = os.listdir(playbooks_folder)
+    playbook_results_folder = './static/playbook_results'
+    
+    # Check if result files exist for each playbook
+    playbook_results_exist = {
+        playbook_file: os.path.isfile(os.path.join(playbook_results_folder, playbook_file.rsplit('.', 1)[0] + '.yml' + '.txt'))
+        for playbook_file in playbook_files
+    }
 
-    # Optionally, filter out non-playbook files if needed
-    # playbook_files = [f for f in playbook_files if f.endswith('.yml')]  # Example for YAML playbooks
-
-    return render_template('playbooks.html', playbook_files=playbook_files)
+    return render_template('playbooks.html', playbook_files=playbook_files, playbook_results_exist=playbook_results_exist)
 
 @socketio.on('execute_playbook')
 def handle_execute_playbook(message):
     playbook_name = message['playbook_name']
+    inventory_file_path = '/root/pve.backoffice/app/inventory.ini'
     playbook_path = os.path.join('./playbooks', secure_filename(playbook_name))
+    playbook_results_dir = '/root/pve.backoffice/app/static/playbook_results'
+    playbook_results_path = os.path.join(playbook_results_dir, secure_filename(playbook_name) + '.txt')
 
-    # Emit an event to the client to open the terminal window
-    emit('open_terminal', {'playbook_name': playbook_name})
+    # Ensure the playbook_results directory exists
+    os.makedirs(playbook_results_dir, exist_ok=True)
 
-    # Run the script in a subprocess
-    process = subprocess.Popen(['bash', playbook_path], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    # Run the Ansible playbook in a subprocess
+    command = ['ansible-playbook', '-i', inventory_file_path, playbook_path]
+    process = subprocess.run(command, capture_output=True, text=True)
 
-    # Stream the output back to the client
-    def generate():
-        for line in process.stdout:
-            line = line.decode('utf-8') if isinstance(line, bytes) else line
-            socketio.emit('playbook_output', {'data': line})  # Broadcasting to all clients
-        process.stdout.close()
-        return_code = process.wait()
-        socketio.emit('playbook_ended', {'exit_code': return_code})  # Broadcasting to all clients
+    # Store the output and return code in the session
+    session['playbook_output'] = process.stdout
+    session['playbook_return_code'] = process.returncode
 
-    socketio.start_background_task(generate)
+    # Write the output to the file
+    with open(playbook_results_path, 'w') as result_file:
+        result_file.write(process.stdout)
+
+    # Parse the output to check for failures
+    failed = any('failed=1' in line for line in process.stdout.splitlines())
+
+    # Emit an event to redirect the client to the route that will show the result
+    if failed or process.returncode != 0:
+        # If there are any failures or a non-zero return code, consider it a failure
+        emit('redirect', {'url': url_for('show_playbook_result', success=False)})
+    else:
+        # Otherwise, consider it a success
+        emit('redirect', {'url': url_for('show_playbook_result', success=True)})
+
+@app.route('/show_playbook_result')
+@login_required
+def show_playbook_result():
+    # Retrieve the result from the session
+    playbook_output = session.pop('playbook_output', 'No output captured.')
+    playbook_return_code = session.pop('playbook_return_code', None)
+    success = request.args.get('success', 'True') == 'True'
+
+    # Flash a message based on the success parameter
+    if success:
+        flash('Playbook executed successfully.', 'success')
+    else:
+        flash('Playbook execution failed with errors. View Results for corrective actions!', 'error')
+
+    # Optionally, you can store the output in a file or handle it as needed
+    # ...
+
+    return redirect(url_for('playbooks'))
 
 @app.route('/create_playbook', methods=['GET', 'POST'])
 @login_required
@@ -283,5 +384,27 @@ def edit_playbook(playbook_name):
     csrf_token = generate_csrf()
     return render_template('edit_playbook.html', playbook_name=playbook_name, playbook_content=playbook_content, csrf_token=csrf_token)
 
+@app.route('/delete_playbook', methods=['POST'])
+@login_required
+def delete_playbook():
+    # Prompt for the passphrase
+    passphrase = request.form.get('passphrase')
+    
+    # Verify the passphrase
+    if passphrase == DELETE_PLAYBOOK_PASSPHRASE:
+        playbook_name = request.form.get('playbook_name')
+        playbook_path = os.path.join('./playbooks', secure_filename(playbook_name))
+        
+        # Delete the playbook file if it exists
+        if os.path.exists(playbook_path):
+            os.remove(playbook_path)
+            flash('Playbook deleted successfully.')
+        else:
+            flash('Playbook not found.')
+    else:
+        flash('Incorrect passphrase.')
+    
+    return redirect(url_for('playbooks'))
+
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', debug=True, port=5000, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', debug=True, port=5000)

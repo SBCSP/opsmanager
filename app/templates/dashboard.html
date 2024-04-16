@@ -5,6 +5,7 @@
 {% block content %}
 <div class="max-w-6xl mx-auto px-4 py-4">
     <h1 class="text-2xl font-semibold text-gray-700 mb-4">Dashboard</h1>
+    
     <div class="grid grid-cols-3 gap-4">
         <div class="p-4 shadow rounded bg-white">
             <h2 class="text-lg font-semibold text-gray-600">Total Servers</h2>
@@ -19,5 +20,50 @@
             <p class="text-3xl">{{ playbook_count }}</p>
         </div>
     </div>
+    <hr>
+    <br>
+    <form id="ping-form" action="{{ url_for('execute_ping') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            Ping all hosts
+        </button>
+    </form>
+    <hr>
+    <br>
+    <table class="min-w-full table-auto">
+        <thead class="bg-gray-200">
+            <tr>
+                <th class="px-4 py-2 text-left">Hostname</th>
+                <th class="px-4 py-2 text-left">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in host_ping_results %}
+            <tr class="border-b">
+                <td class="px-4 py-2">{{ result.hostname }}</td>
+                <td class="px-4 py-2">
+                    {% if result.status == 'Success' %}
+                        <!-- Render a green dot for successful pings -->
+                        <span class="inline-block w-3 h-3 bg-green-500 rounded-full"></span>
+                    {% else %}
+                        <!-- Render a red dot for failed or unreachable pings -->
+                        <span class="inline-block w-3 h-3 bg-red-500 rounded-full"></span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
+<script type="text/javascript">
+    // Get the form element
+    var pingForm = document.getElementById('ping-form');
+
+    // Add an event listener for the form submission
+    pingForm.addEventListener('submit', function() {
+        // Show the loading spinner
+        var spinner = document.getElementById('loading-spinner');
+        spinner.classList.remove('hidden');
+    });
+</script>
 {% endblock %}

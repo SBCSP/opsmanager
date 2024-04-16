@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{% endblock %}</title>
+    <title>{% block title %}MH BackOffice{% endblock %}</title>
     <!-- Include Tailwind CSS from CDN for simplicity -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <!-- Or you can use your local Tailwind CSS file if you've set up Tailwind with your build process -->
     <!-- <link href="{{ url_for('static', filename='css/tailwind.css') }}" rel="stylesheet"> -->
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='nodemanagerlogo.png') }}">
     {% block head %}{% endblock %}
 </head>
 <body class="bg-gray-100">
+    <div id="loading-spinner" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+        <div class="animate-spin rounded-full h-32 w-32 border-t-4 border-b-4 border-blue-500"></div>
+    </div>
 
     <!-- Navigation -->
     <nav class="bg-white shadow-lg">
@@ -23,7 +24,6 @@
                     <div>
                         <!-- Website Logo -->
                         <a href="{{ url_for('dashboard') }}" class="flex items-center py-4 px-2">
-                            <img src="{{ url_for('static', filename='nodemanagerlogo.png') }}" alt="Logo" class="h-8 w-auto">
                             <span class="font-semibold text-gray-500 text-lg">NodeManager</span>
                         </a>
                     </div>
@@ -43,18 +43,38 @@
             </div>
         </div>
     </nav>
+    
 
     <div class="max-w-6xl mx-auto px-4 py-4">
-        {% with messages = get_flashed_messages() %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
-                    {% for message in messages %}
-                        <span class="block sm:inline">{{ message }}</span>
-                    {% endfor %}
-                </div>
+                {% for category, message in messages %}
+                    <div class="alert {{ 'alert-success' if category == 'success' else 'alert-danger' }}" role="alert">
+                        {{ message }}
+                    </div>
+                {% endfor %}
             {% endif %}
         {% endwith %}
     </div>
+
+    <style>
+        .alert {
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+        .alert-success {
+            color: #3c763d;
+            background-color: #dff0d8;
+            border-color: #d6e9c6;
+        }
+        .alert-danger {
+            color: #a94442;
+            background-color: #f2dede;
+            border-color: #ebccd1;
+        }
+    </style>
 
     <!-- Content -->
     <div class="py-6">

@@ -6,7 +6,7 @@
 <div class="max-w-6xl mx-auto px-4 py-4">
     <div class="flex items-center justify-between mb-4">
         <div class="flex items-center">
-            <img src="{{ url_for('static', filename='scriptslogo.png') }}" alt="Logo" class="h-12 w-auto mr-2">
+            <img src="{{ url_for('static', filename='scripts.jpg') }}" alt="Logo" class="h-12 w-auto mr-2">
             <h1 class="text-2xl font-semibold text-gray-700">
                 Scripts
             </h1>
@@ -53,7 +53,7 @@
 <!-- Add this to the bottom of your scripts.html inside the block content -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.3/socket.io.js"></script>
 <script type="text/javascript">
-    var socket = io.connect('http://' + document.domain + ':' + location.port);
+    var socket = io.connect('https://' + document.domain + ':' + location.port);
 
     function executeScript(scriptName) {
         socket.emit('execute_script', { 'script_name': scriptName });

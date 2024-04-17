@@ -1,0 +1,10 @@
+[
+    "Listing...",
+    "libgnutls30/jammy-updates,jammy-security 3.7.3-4ubuntu1.5 amd64 [upgradable from: 3.7.3-4ubuntu1.4]",
+    "python3-update-manager/jammy-updates 1:22.04.20 all [upgradable from: 1:22.04.19]",
+    "twingate-connector/unknown 1.65.0 amd64 [upgradable from: 1.64.0]",
+    "ubuntu-advantage-tools/jammy-updates 31.2.2~22.04 all [upgradable from: 31.2~22.04]",
+    "ubuntu-pro-client-l10n/jammy-updates 31.2.2~22.04 amd64 [upgradable from: 31.2~22.04]",
+    "ubuntu-pro-client/jammy-updates 31.2.2~22.04 amd64 [upgradable from: 31.2~22.04]",
+    "update-manager-core/jammy-updates 1:22.04.20 all [upgradable from: 1:22.04.19]"
+]

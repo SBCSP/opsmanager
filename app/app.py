@@ -448,5 +448,10 @@ def clear_playbook_result(playbook_name):
 
     return redirect(url_for('playbooks'))
 
+@app.route('/vault')
+@login_required
+def vault():
+    return render_template('vault.html')
+
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', debug=True, port=5000)

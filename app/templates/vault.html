@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Vault{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4">
+    <!-- Header with Servers and Edit Inventory button on the same line -->
+    <div class="flex justify-between items-center mb-4">
+        <div class="flex items-center">
+            <img src="{{ url_for('static', filename='vaultlogo1.jpg') }}" alt="Logo" class="h-12 w-auto mr-2">
+            <h1 class="text-2xl font-semibold text-gray-700">
+                Vault
+            </h1>
+        </div>
+    </div>
+    
+    <!-- Server groups and counts in a table -->
+    <table class="min-w-full table-auto">
+        <thead class="bg-gray-200">
+            <tr>
+                <th class="px-4 py-2 text-left">Filename</th>
+                <th class="px-4 py-2 text-left">Date Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            
+            <tr class="border-b">
+                <td class="px-4 py-2"></td>
+                <td class="px-4 py-2"></td>
+            </tr>
+        
+        </tbody>
+    </table>
+</div>
+{% endblock %}

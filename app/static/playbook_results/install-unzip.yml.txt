@@ -1,0 +1,26 @@
+
+PLAY [Install unzip on Debian servers] *****************************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [NginxPM]
+ok: [TWINGATE-HA-2]
+ok: [SonarQube]
+fatal: [Wazuh-SingleNode]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: ssh: connect to host 192.168.0.235 port 22: No route to host", "unreachable": true}
+ok: [SBCSP-Org-Runner]
+ok: [Proxmox]
+
+TASK [Install unzip] ***********************************************************
+ok: [Proxmox]
+ok: [TWINGATE-HA-2]
+ok: [NginxPM]
+ok: [SonarQube]
+ok: [SBCSP-Org-Runner]
+
+PLAY RECAP *********************************************************************
+NginxPM                    : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+Proxmox                    : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+SBCSP-Org-Runner           : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+SonarQube                  : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+TWINGATE-HA-2              : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+Wazuh-SingleNode           : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+

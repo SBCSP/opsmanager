@@ -19,7 +19,9 @@ app.secret_key = os.getenv('SECRET_KEY')
 csrf = CSRFProtect(app)
 socketio = SocketIO(app)
 
-DELETE_PLAYBOOK_PASSPHRASE = os.getenv('DELETE_PLAYBOOK_PASSPHRASE')
+EXECUTE_PASSPHRASE = os.getenv('EXECUTE_PASSPHRASE')
+DELETE_PASSPHRASE = os.getenv('DELETE_PASSPHRASE')
+
 
 # Load Azure AD app registration details
 @app.route("/login")
@@ -93,8 +95,8 @@ def dashboard():
 
 @app.route('/execute_ping', methods=['POST'])
 def execute_ping():
-    inventory_file_path = '/root/pve.backoffice/app/inventory.ini'
-    host_ping_dir = '/root/pve.backoffice/app/static/host_ping'
+    inventory_file_path = '/root/pve.cloudbox/app/inventory.ini'
+    host_ping_dir = '/root/pve.cloudbox/app/static/host_ping'
     
     # Ensure the host_ping directory exists
     os.makedirs(host_ping_dir, exist_ok=True)
@@ -170,7 +172,7 @@ def edit_inventory():
 @app.route('/upgradable_packages')
 @login_required
 def upgradable_packages():
-    upgradable_packages_folder = './playbooks/upgradable_packages'
+    upgradable_packages_folder = './static/upgradable_packages'
     package_files = os.listdir(upgradable_packages_folder)
     package_data = {}
 
@@ -265,6 +267,28 @@ def edit_script(script_name):
     csrf_token = generate_csrf()
     return render_template('edit_script.html', script_name=script_name, script_content=script_content, csrf_token=csrf_token)
 
+@app.route('/delete_script', methods=['POST'])
+@login_required
+def delete_script():
+    # Prompt for the passphrase
+    passphrase = request.form.get('passphrase')
+    
+    # Verify the passphrase
+    if passphrase == DELETE_PASSPHRASE:
+        script_name = request.form.get('script_name')
+        script_path = os.path.join('./scripts', secure_filename(script_name))
+        
+        # Delete the script file if it exists
+        if os.path.exists(script_path):
+            os.remove(script_path)
+            flash('Script deleted successfully.')
+        else:
+            flash('Script not found.')
+    else:
+        flash('Incorrect passphrase.')
+    
+    return redirect(url_for('scripts'))
+
 @app.route('/playbooks')
 @login_required
 def playbooks():
@@ -282,10 +306,15 @@ def playbooks():
 
 @socketio.on('execute_playbook')
 def handle_execute_playbook(message):
+    passphrase = message.get('passphrase')
+    if passphrase != EXECUTE_PASSPHRASE:
+        emit('playbook_error', {'error': 'Incorrect passphrase.'})  # Emitting an error-specific event
+        return  # Stop execution if the passphrase is incorrect
+
     playbook_name = message['playbook_name']
-    inventory_file_path = '/root/pve.backoffice/app/inventory.ini'
+    inventory_file_path = '/root/pve.cloudbox/app/inventory.ini'
     playbook_path = os.path.join('./playbooks', secure_filename(playbook_name))
-    playbook_results_dir = '/root/pve.backoffice/app/static/playbook_results'
+    playbook_results_dir = '/root/pve.cloudbox/app/static/playbook_results'
     playbook_results_path = os.path.join(playbook_results_dir, secure_filename(playbook_name) + '.txt')
 
     # Ensure the playbook_results directory exists
@@ -308,10 +337,8 @@ def handle_execute_playbook(message):
 
     # Emit an event to redirect the client to the route that will show the result
     if failed or process.returncode != 0:
-        # If there are any failures or a non-zero return code, consider it a failure
         emit('redirect', {'url': url_for('show_playbook_result', success=False)})
     else:
-        # Otherwise, consider it a success
         emit('redirect', {'url': url_for('show_playbook_result', success=True)})
 
 @app.route('/show_playbook_result')
@@ -391,7 +418,7 @@ def delete_playbook():
     passphrase = request.form.get('passphrase')
     
     # Verify the passphrase
-    if passphrase == DELETE_PLAYBOOK_PASSPHRASE:
+    if passphrase == DELETE_PASSPHRASE:
         playbook_name = request.form.get('playbook_name')
         playbook_path = os.path.join('./playbooks', secure_filename(playbook_name))
         
@@ -404,6 +431,21 @@ def delete_playbook():
     else:
         flash('Incorrect passphrase.')
     
+    return redirect(url_for('playbooks'))
+
+@app.route('/clear_playbook_result/<playbook_name>', methods=['POST'])
+@login_required
+def clear_playbook_result(playbook_name):
+    # Construct the path to the results file
+    results_path = os.path.join('./static/playbook_results', secure_filename(playbook_name.rsplit('.', 1)[0] + '.yml.txt'))
+
+    # Check if the file exists and delete it
+    if os.path.exists(results_path):
+        os.remove(results_path)
+        flash('Results cleared successfully.', 'info')
+    else:
+        flash('No results found to clear.', 'info')
+
     return redirect(url_for('playbooks'))
 
 if __name__ == '__main__':

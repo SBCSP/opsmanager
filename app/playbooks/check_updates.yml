@@ -27,6 +27,6 @@
     - name: Fetch JSON file to local control host
       ansible.builtin.fetch:
         src: "/tmp/upgradable_packages_{{ ansible_hostname }}.json"
-        dest: "./upgradable_packages/"
+        dest: "../static/upgradable_packages/"
         flat: yes
       when: json_content is defined

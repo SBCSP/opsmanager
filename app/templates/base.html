@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}MH BackOffice{% endblock %}</title>
+    <title>{% block title %}{% endblock %}</title>
     <!-- Include Tailwind CSS from CDN for simplicity -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
@@ -33,7 +33,7 @@
                         <a href="{{ url_for('servers') }}" class="py-4 px-2 text-gray-500 font-semibold hover:text-green-500 transition duration-300">Servers</a>
                         <a href="{{ url_for('scripts') }}" class="py-4 px-2 text-gray-500 font-semibold hover:text-green-500 transition duration-300">Scripts</a>
                         <a href="{{ url_for('playbooks') }}" class="py-4 px-2 text-gray-500 font-semibold hover:text-green-500 transition duration-300">Playbooks</a>
-                        <a href="{{ url_for('active_terminal') }}" class="py-4 px-2 text-gray-500 font-semibold hover:text-green-500 transition duration-300">Terminal</a>
+                        <!-- <a href="{{ url_for('active_terminal') }}" class="py-4 px-2 text-gray-500 font-semibold hover:text-green-500 transition duration-300">Terminal</a> -->
                     </div>
                 </div>
                 <!-- Secondary Navbar items -->
@@ -49,7 +49,7 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert {{ 'alert-success' if category == 'success' else 'alert-danger' }}" role="alert">
+                    <div class="alert alert-info" role="alert">
                         {{ message }}
                     </div>
                 {% endfor %}
@@ -64,15 +64,10 @@
             border: 1px solid transparent;
             border-radius: 4px;
         }
-        .alert-success {
-            color: #3c763d;
-            background-color: #dff0d8;
-            border-color: #d6e9c6;
-        }
-        .alert-danger {
-            color: #a94442;
-            background-color: #f2dede;
-            border-color: #ebccd1;
+        .alert-info {
+            color: #0c4a6e; /* Darker blue text color for better contrast and readability */
+            background-color: #bee3f8; /* Light blue background */
+            border-color: #7fdbff; /* Slightly darker blue border */
         }
     </style>
 

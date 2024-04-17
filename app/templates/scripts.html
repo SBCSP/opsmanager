@@ -42,6 +42,10 @@
                     <a href="{{ url_for('edit_script', script_name=script_file) }}" class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-3 rounded inline-block ml-2">
                         Edit
                     </a>
+                    <button onclick="deleteScript('{{ script_file }}')"
+                        class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded">
+                        Delete
+                    </button>
                 </td>
             </tr>
             {% endfor %}
@@ -77,5 +81,38 @@
         var terminalWindow = document.getElementById('terminal');
         terminalWindow.innerHTML += '<br>Script ended with exit code: ' + data.exit_code;
     });
+
+    // Remove the playbook_output and playbook_ended event handlers
+
+    function deleteScript(scriptName) {
+        var passphrase = prompt('Please enter the passphrase to delete the script:');
+        if (passphrase != null) {
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ url_for('delete_script') }}';
+
+            // CSRF token input
+            var csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = '{{ csrf_token() }}';
+            form.appendChild(csrfInput);
+
+            var scriptInput = document.createElement('input');
+            scriptInput.type = 'hidden';
+            scriptInput.name = 'script_name';
+            scriptInput.value = scriptName;
+            form.appendChild(scriptInput);
+
+            var passphraseInput = document.createElement('input');
+            passphraseInput.type = 'hidden';
+            passphraseInput.name = 'passphrase';
+            passphraseInput.value = passphrase;
+            form.appendChild(passphraseInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
 </script>
 {% endblock %}

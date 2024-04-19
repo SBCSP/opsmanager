@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 from flask_socketio import SocketIO, emit
+from flask_cors import CORS
 import subprocess
 from flask_wtf import CSRFProtect
 from flask_wtf.csrf import generate_csrf
@@ -11,6 +12,8 @@ from flask import flash
 from dotenv import load_dotenv
 from azure_auth import login, authorized, logout, login_required
 import msal
+import time
+from backend import response
 
 load_dotenv()
 
@@ -18,6 +21,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
 csrf = CSRFProtect(app)
 socketio = SocketIO(app)
+CORS(app)
 
 EXECUTE_PASSPHRASE = os.getenv('EXECUTE_PASSPHRASE')
 DELETE_PASSPHRASE = os.getenv('DELETE_PASSPHRASE')
@@ -452,6 +456,27 @@ def clear_playbook_result(playbook_name):
 @login_required
 def vault():
     return render_template('vault.html')
+
+@app.route('/chatbot')
+@login_required
+def ansibleai():
+    return render_template('ansibleai.html')
+
+
+@app.route('/chat', methods=['POST'])
+@login_required
+def chat():
+    message = request.form.get('msg')
+    app.logger.debug(f"Received message: {message}")
+    if not message:
+        app.logger.error("No message provided in form.")
+        return jsonify({'error': 'No message provided'}), 400
+    try:
+        response_text = response(message)
+        return response_text
+    except Exception as e:
+        app.logger.error(f"Error during response processing: {e}")
+        return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', debug=True, port=5000)

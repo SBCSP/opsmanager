@@ -13,3 +13,16 @@ werkzeug
 requests
 identity
 msal
+openai==1.6.1
+aiohttp==3.9.1
+beautifulsoup4
+chromadb
+fastapi==0.99.1
+Jinja2==3.1.2
+langchain==0.0.292
+langchain-community
+langchain-core==0.1.8
+langchain-openai==0.0.2
+langchainhub==0.1.14
+langsmith==0.0.77
+flask_cors

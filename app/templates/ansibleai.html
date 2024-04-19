@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Ansible AI{% endblock %}
+
+{% block content %}
+
+<!-- Tailwind CSS CDN -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+
+<head>
+    <title>AnsibleAI</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css')}}" />
+</head>
+<div class="flex flex-col h-screen">
+    <div class="mx-auto w-full max-w-4xl mt-0">
+        <div class="bg-white shadow-lg rounded-lg">
+            <div class="p-4 border-b border-gray-200">
+                <div class="flex items-center">
+                    <div class="flex items-center">
+                        <img src="{{ url_for('static', filename='logo.jpeg')}}" class="rounded-full h-12 w-12">
+                        <span class="ml-2 text-lg text-gray-700">Ansible AI</span>
+                    </div>
+                    <div class="ml-auto">
+                        <span>Let's talk Ansible!</span>
+                    </div>
+                </div>
+            </div>
+            <div id="messageFormeight" class="p-4 h-[80vh] overflow-y-auto">
+                <!-- Messages will be appended here -->
+            </div>
+            <div class="p-4">
+                <form id="messageArea" class="flex">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <input type="text" id="text" name="msg" placeholder="Type your message..." autocomplete="off" class="flex-1 p-2 border rounded focus:outline-none focus:shadow-outline" required />
+                    <button type="submit" id="send" class="ml-2 p-2 bg-blue-500 text-white rounded" onclick="loading()">
+                        <i class="fas fa-location-arrow"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        $("#messageArea").on("submit", function(event) {
+            event.preventDefault();
+            const date = new Date();
+            const hour = date.getHours();
+            const minute = date.getMinutes();
+            const str_time = hour + ":" + minute;
+            var rawText = $("#text").val();
+
+            var userHtml = '<div class="flex justify-end mb-4"><div class="bg-gray-300 p-2 rounded">' + rawText + '<span class="text-sm text-gray-600">' + str_time + '</span></div></div>';
+
+            $("#text").val("");
+            $("#messageFormeight").append(userHtml);
+
+            $.ajax({
+                data: {
+                    msg: rawText,
+                    csrf_token: $('input[name="csrf_token"]').val()
+                },
+                type: "POST",
+                url: "/chat",
+                headers: {
+                    'X-CSRFToken': $('input[name="csrf_token"]').val()
+                }
+            }).done(function(data) {
+                var botHtml = '<div class="flex justify-start mb-4"><div class="bg-blue-100 p-2 rounded">' + data + '<span class="text-sm text-gray-600">' + str_time + '</span></div></div>';
+                $("#messageFormeight").append($.parseHTML(botHtml));
+                hideLoading();
+            });
+        });
+    });
+
+    function loading() {
+        // Implement loading behavior
+    };
+
+    function hideLoading() {
+        // Implement hide loading behavior
+    }
+</script>
+
+{% endblock %}

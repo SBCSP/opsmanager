@@ -8,28 +8,22 @@
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 
-<head>
-    <title>AnsibleAI</title>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css')}}" />
-</head>
 <div class="flex flex-col h-screen">
-    <div class="mx-auto w-full max-w-4xl mt-0">
-        <div class="bg-white shadow-lg rounded-lg">
-            <div class="p-4 border-b border-gray-200">
+    <div class="mx-auto w-full" style="width: 80vw;">
+        <div class="bg-white shadow-lg rounded-lg flex flex-col max-h-screen">
+            <div class="p-4 border-b border-gray-200 flex-none">
                 <div class="flex items-center">
-                    <div class="flex items-center">
-                        <img src="{{ url_for('static', filename='logo.jpeg')}}" class="rounded-full h-12 w-12">
-                        <span class="ml-2 text-lg text-gray-700">Ansible AI</span>
-                    </div>
+                    <img src="{{ url_for('static', filename='logo.jpeg')}}" class="rounded-full h-12 w-12">
+                    <span class="ml-2 text-lg text-gray-700">Ansible AI</span>
                     <div class="ml-auto">
                         <span>Let's talk Ansible!</span>
                     </div>
                 </div>
             </div>
-            <div id="messageFormeight" class="p-4 h-[80vh] overflow-y-auto">
+            <div id="messageFormeight" class="flex-auto p-4 overflow-y-auto" style="max-height: calc(100vh - 200px);">
                 <!-- Messages will be appended here -->
             </div>
-            <div class="p-4">
+            <div class="p-4 flex-none">
                 <form id="messageArea" class="flex">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                     <input type="text" id="text" name="msg" placeholder="Type your message..." autocomplete="off" class="flex-1 p-2 border rounded focus:outline-none focus:shadow-outline" required />
@@ -42,46 +36,68 @@
     </div>
 </div>
 
+
+
 <script>
     $(document).ready(function() {
-        $("#messageArea").on("submit", function(event) {
-            event.preventDefault();
-            const date = new Date();
-            const hour = date.getHours();
-            const minute = date.getMinutes();
-            const str_time = hour + ":" + minute;
-            var rawText = $("#text").val();
+		$("#messageArea").on("submit", function(event) {
+			event.preventDefault();
+			const date = new Date();
+			const hour = date.getHours();
+			const minute = date.getMinutes();
+			const str_time = hour + ":" + minute;
+			var rawText = $("#text").val();
+	
+			var userHtml = '<div class="flex justify-end mb-4"><div class="bg-gray-300 p-2 rounded">' + rawText + '<span class="text-sm text-gray-600">' + str_time + '</span></div></div>';
+	
+			$("#text").val("");
+			$("#messageFormeight").append(userHtml);
+	
+			$.ajax({
+				data: {
+					msg: rawText,
+					csrf_token: $('input[name="csrf_token"]').val()
+				},
+				type: "POST",
+				url: "/chat",
+				headers: {
+					'X-CSRFToken': $('input[name="csrf_token"]').val()
+				}
+			}).done(function(data) {
+				// Check and format response for lists and code blocks
+				var formattedData = formatResponse(data);
+				var botHtml = '<div class="flex justify-start mb-4"><div class="bg-blue-100 p-2 rounded">' + formattedData + '<span class="text-sm text-gray-600">' + str_time + '</span></div></div>';
+				$("#messageFormeight").append($.parseHTML(botHtml));
+				hideLoading();
+				adjustChatHeight();
+			});
+		});
+	});
 
-            var userHtml = '<div class="flex justify-end mb-4"><div class="bg-gray-300 p-2 rounded">' + rawText + '<span class="text-sm text-gray-600">' + str_time + '</span></div></div>';
-
-            $("#text").val("");
-            $("#messageFormeight").append(userHtml);
-
-            $.ajax({
-                data: {
-                    msg: rawText,
-                    csrf_token: $('input[name="csrf_token"]').val()
-                },
-                type: "POST",
-                url: "/chat",
-                headers: {
-                    'X-CSRFToken': $('input[name="csrf_token"]').val()
-                }
-            }).done(function(data) {
-                var botHtml = '<div class="flex justify-start mb-4"><div class="bg-blue-100 p-2 rounded">' + data + '<span class="text-sm text-gray-600">' + str_time + '</span></div></div>';
-                $("#messageFormeight").append($.parseHTML(botHtml));
-                hideLoading();
-            });
-        });
-    });
-
-    function loading() {
-        // Implement loading behavior
-    };
-
-    function hideLoading() {
-        // Implement hide loading behavior
-    }
+	function adjustChatHeight() {
+		var messageFormeight = document.getElementById('messageFormeight');
+		var newHeight = messageFormeight.scrollHeight > 200 ? messageFormeight.scrollHeight : 200; // Minimum height 200px
+		if (newHeight > window.innerHeight * 0.6) { // Max height 60% of viewport height
+			newHeight = window.innerHeight * 0.6;
+		}
+		messageFormeight.style.height = newHeight + 'px';
+	}
+	
+	function formatResponse(data) {
+		// Simple example of formatting based on cues
+		data = data.replace(/(?:\d+\.\s*\*\*)([^\*]+)(\*\*)/g, '<li>$1</li>'); // Convert numbered items into list items
+		data = data.replace(/```([^`]+)```/g, '<pre><code>$1</code></pre>'); // Convert triple backticks into code blocks
+		return '<ol>' + data + '</ol>'; // Wrap in ordered list
+	}
+	
+	function loading() {
+		// Implement loading behavior
+	};
+	
+	function hideLoading() {
+		// Implement hide loading behavior
+	}
+	
 </script>
 
 {% endblock %}

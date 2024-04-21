@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kronosys
-spec:
-  containers:
-  - name: kronoserver
-    image: sandboxcsp/kronosys:latest
-    # command: ["ping", ""]

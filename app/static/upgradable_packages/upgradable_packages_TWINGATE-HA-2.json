@@ -1,6 +1,9 @@
 [
     "Listing...",
+    "libc-bin/jammy-updates,jammy-security 2.35-0ubuntu3.7 amd64 [upgradable from: 2.35-0ubuntu3.6]",
+    "libc6/jammy-updates,jammy-security 2.35-0ubuntu3.7 amd64 [upgradable from: 2.35-0ubuntu3.6]",
     "libgnutls30/jammy-updates,jammy-security 3.7.3-4ubuntu1.5 amd64 [upgradable from: 3.7.3-4ubuntu1.4]",
+    "locales/jammy-updates,jammy-security 2.35-0ubuntu3.7 all [upgradable from: 2.35-0ubuntu3.6]",
     "openssh-client/jammy-updates 1:8.9p1-3ubuntu0.7 amd64 [upgradable from: 1:8.9p1-3ubuntu0.6]",
     "openssh-server/jammy-updates 1:8.9p1-3ubuntu0.7 amd64 [upgradable from: 1:8.9p1-3ubuntu0.6]",
     "openssh-sftp-server/jammy-updates 1:8.9p1-3ubuntu0.7 amd64 [upgradable from: 1:8.9p1-3ubuntu0.6]",

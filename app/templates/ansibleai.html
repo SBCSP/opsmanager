@@ -7,16 +7,16 @@
 <!-- Tailwind CSS CDN -->
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-
+<div id="ai-chat-container" class="hidden">
 <div class="flex flex-col h-screen">
     <div class="mx-auto w-full" style="width: 80vw;">
         <div class="bg-white shadow-lg rounded-lg flex flex-col max-h-screen">
             <div class="p-4 border-b border-gray-200 flex-none">
                 <div class="flex items-center">
                     <img src="{{ url_for('static', filename='logo.jpeg')}}" class="rounded-full h-12 w-12">
-                    <span class="ml-2 text-lg text-gray-700">Ansible AI</span>
+                    <span class="ml-2 text-lg text-gray-700">AI Ops</span>
                     <div class="ml-auto">
-                        <span>Let's talk Ansible!</span>
+                        <span>Let's talk Tech!</span>
                     </div>
                 </div>
             </div>
@@ -35,6 +35,7 @@
         </div>
     </div>
 </div>
+</div>
 
 
 
@@ -42,6 +43,7 @@
     $(document).ready(function() {
 		$("#messageArea").on("submit", function(event) {
 			event.preventDefault();
+			loading();
 			const date = new Date();
 			const hour = date.getHours();
 			const minute = date.getMinutes();
@@ -89,14 +91,30 @@
 		data = data.replace(/```([^`]+)```/g, '<pre><code>$1</code></pre>'); // Convert triple backticks into code blocks
 		return '<ol>' + data + '</ol>'; // Wrap in ordered list
 	}
+
+	window.onload = function() {
+        document.getElementById('loading-spinner').classList.remove('hidden');
+        loadChat(); // Call a function to load the chat
+    };
+
+	function loadChat() {
+        // Simulate chat loading with a timeout (replace this with actual chat loading logic)
+        setTimeout(function() {
+            // Once chat is ready, hide the spinner and show the chat container
+            document.getElementById('loading-spinner').classList.add('hidden');
+            document.getElementById('ai-chat-container').classList.remove('hidden');
+        }, 3000); // Replace with actual chat load completion event
+    }
 	
 	function loading() {
-		// Implement loading behavior
-	};
-	
-	function hideLoading() {
-		// Implement hide loading behavior
-	}
+        // Show the spinner
+        document.getElementById('loading-spinner').classList.remove('hidden');
+    }
+    
+    function hideLoading() {
+        // Hide the spinner
+        document.getElementById('loading-spinner').classList.add('hidden');
+    }
 	
 </script>
 

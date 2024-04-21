@@ -26,3 +26,7 @@ langchain-openai==0.0.2
 langchainhub==0.1.14
 langsmith==0.0.77
 flask_cors
+psycopg2-binary
+Flask-SQLAlchemy 
+Flask-Migrate
+SQLAlchemy

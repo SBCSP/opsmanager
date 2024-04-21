@@ -6,7 +6,11 @@ from flask_wtf import CSRFProtect
 from flask_wtf.csrf import generate_csrf
 import configparser
 from collections import defaultdict
+import sys
+sys.path.append('/root/pve.cloudbox/app')
+import tempfile
 import os
+import subprocess
 from werkzeug.utils import secure_filename
 from flask import flash
 from dotenv import load_dotenv
@@ -14,10 +18,18 @@ from azure_auth import login, authorized, logout, login_required
 import msal
 import time
 from backend import response
+import logging
 
 load_dotenv()
 
+logging.basicConfig(level=logging.DEBUG)
+
 app = Flask(__name__)
+
+from database import models
+from database.connection import db, init_db
+from database.models import Playbooks, PlaybookResults
+init_db(app)
 app.secret_key = os.getenv('SECRET_KEY')
 csrf = CSRFProtect(app)
 socketio = SocketIO(app)
@@ -293,57 +305,71 @@ def delete_script():
     
     return redirect(url_for('scripts'))
 
+
 @app.route('/playbooks')
 @login_required
 def playbooks():
-    playbooks_folder = './playbooks'
-    playbook_files = os.listdir(playbooks_folder)
-    playbook_results_folder = './static/playbook_results'
-    
-    # Check if result files exist for each playbook
-    playbook_results_exist = {
-        playbook_file: os.path.isfile(os.path.join(playbook_results_folder, playbook_file.rsplit('.', 1)[0] + '.yml' + '.txt'))
-        for playbook_file in playbook_files
-    }
+    # Query all playbooks from the database
+    all_playbooks = Playbooks.query.all()
 
-    return render_template('playbooks.html', playbook_files=playbook_files, playbook_results_exist=playbook_results_exist)
+    # Pass the queried playbooks to the template
+    return render_template('playbooks.html', playbooks=all_playbooks)
 
 @socketio.on('execute_playbook')
 def handle_execute_playbook(message):
     passphrase = message.get('passphrase')
+    sudo_password = message.get('sudo_password')
     if passphrase != EXECUTE_PASSPHRASE:
-        emit('playbook_error', {'error': 'Incorrect passphrase.'})  # Emitting an error-specific event
-        return  # Stop execution if the passphrase is incorrect
+        emit('playbook_error', {'error': 'Incorrect passphrase.'})
+        return
 
     playbook_name = message['playbook_name']
-    inventory_file_path = '/root/pve.cloudbox/app/inventory.ini'
-    playbook_path = os.path.join('./playbooks', secure_filename(playbook_name))
-    playbook_results_dir = '/root/pve.cloudbox/app/static/playbook_results'
-    playbook_results_path = os.path.join(playbook_results_dir, secure_filename(playbook_name) + '.txt')
+    playbook = Playbooks.query.filter_by(name=playbook_name).first()
+    if playbook is None:
+        emit('playbook_error', {'error': 'Playbook not found.'})
+        return
 
-    # Ensure the playbook_results directory exists
-    os.makedirs(playbook_results_dir, exist_ok=True)
+    # Create a temporary file to store the playbook content
+    with tempfile.NamedTemporaryFile(suffix='.yml', delete=False) as tmp_file:
+        playbook_path = tmp_file.name
+        tmp_file.write(playbook.content.encode('utf-8'))
+
+    inventory_file_path = '/root/pve.cloudbox/app/inventory.ini'
+
+    # Prepare the command for running the Ansible playbook
+    command = ['ansible-playbook', '-i', inventory_file_path, playbook_path]
+    if playbook.sudo_required:
+        command += ['--become', '--become-method=sudo']
+
+    # Set the environment variable for the BECOME password
+    env = os.environ.copy()
+    if playbook.sudo_required and sudo_password:
+        env['ANSIBLE_BECOME_PASS'] = sudo_password
 
     # Run the Ansible playbook in a subprocess
-    command = ['ansible-playbook', '-i', inventory_file_path, playbook_path]
-    process = subprocess.run(command, capture_output=True, text=True)
+    process = subprocess.run(command, capture_output=True, text=True, env=env)
 
     # Store the output and return code in the session
     session['playbook_output'] = process.stdout
     session['playbook_return_code'] = process.returncode
 
-    # Write the output to the file
-    with open(playbook_results_path, 'w') as result_file:
-        result_file.write(process.stdout)
-
-    # Parse the output to check for failures
-    failed = any('failed=1' in line for line in process.stdout.splitlines())
-
-    # Emit an event to redirect the client to the route that will show the result
-    if failed or process.returncode != 0:
-        emit('redirect', {'url': url_for('show_playbook_result', success=False)})
-    else:
+    # Create a new PlaybookResults instance and save the results to the database
+    new_playbook_result = PlaybookResults(
+        playbook_id=playbook.id,
+        result_data=process.stdout if process.stdout else process.stderr
+    )
+    db.session.add(new_playbook_result)
+    try:
+        db.session.commit()
+        # Emit an event to redirect the client to the route that will show the result
         emit('redirect', {'url': url_for('show_playbook_result', success=True)})
+    except Exception as e:
+        db.session.rollback()
+        emit('playbook_error', {'error': 'Failed to save playbook results.'})
+        app.logger.error(f'Failed to save playbook results: {e}')
+
+    # Clean up the temporary playbook file
+    os.unlink(playbook_path)
 
 @app.route('/show_playbook_result')
 @login_required
@@ -370,70 +396,98 @@ def create_playbook():
     if request.method == 'POST':
         playbook_name = request.form['playbook_name']
         playbook_content = request.form['playbook_content']
+        sudo_required = 'sudo_required' in request.form  # This will be True if the checkbox is checked
 
-        # Ensure the script name is safe to use as a file name
+        # Ensure the playbook name is safe to use
         playbook_name = secure_filename(playbook_name)
 
-        # Path to the scripts folder
-        playbooks_folder = './playbooks'
-        playbook_path = os.path.join(playbooks_folder, playbook_name)
+        # Check if a playbook with this name already exists
+        existing_playbook = Playbooks.query.filter_by(name=playbook_name).first()
+        if existing_playbook is not None:
+            flash('A playbook with this name already exists.', 'error')
+            return redirect(url_for('create_playbook'))
 
-        # Save the script content to a file
-        with open(playbook_path, 'w') as file:
-            file.write(playbook_content)
-        
-        # Redirect to a confirmation page or back to the script form
+        # Create a new Playbook instance with the sudo_required field
+        new_playbook = Playbooks(name=playbook_name, content=playbook_content, sudo_required=sudo_required)
+
+        # Add the new playbook to the session and commit to the database
+        db.session.add(new_playbook)
+        try:
+            db.session.commit()
+            flash('Playbook created successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error creating playbook.', 'error')
+            app.logger.error(f'Error creating playbook: {e}')
+
+        # Redirect to the playbooks overview page
         return redirect(url_for('playbooks'))
 
-    csrf_token = generate_csrf()
-    return render_template('create_playbook.html', csrf_token=csrf_token)
+    # Render the create playbook page
+    return render_template('create_playbook.html')
 
 @app.route('/edit_playbook/<playbook_name>', methods=['GET', 'POST'])
 @login_required
 def edit_playbook(playbook_name):
-    playbooks_folder = './playbooks'
-    original_playbook_path = os.path.join(playbooks_folder, secure_filename(playbook_name))
+    # Query the playbook from the database
+    playbook = Playbooks.query.filter_by(name=playbook_name).first()
+    if not playbook:
+        flash('Playbook not found.', 'error')
+        return redirect(url_for('playbooks'))
 
     if request.method == 'POST':
         new_playbook_name = request.form['new_playbook_name']
-        new_playbook_path = os.path.join(playbooks_folder, secure_filename(new_playbook_name))
         playbook_content = request.form['playbook_content']
+        sudo_required = 'sudo_required' in request.form  # This will be True if the checkbox is checked
 
-        # Rename the file if the new name is different from the original
-        if new_playbook_path != original_playbook_path:
-            os.rename(original_playbook_path, new_playbook_path)
+        # Ensure the new playbook name is safe to use
+        new_playbook_name = secure_filename(new_playbook_name)
 
-        # Save the updated content to the file
-        with open(new_playbook_path, 'w') as file:
-            file.write(playbook_content)
+        # Update the playbook's name, content, and sudo_required in the database
+        playbook.name = new_playbook_name
+        playbook.content = playbook_content
+        playbook.sudo_required = sudo_required
+
+        try:
+            db.session.commit()
+            flash('Playbook updated successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error updating playbook.', 'error')
+            app.logger.error(f'Error updating playbook: {e}')
 
         return redirect(url_for('playbooks'))
 
-    with open(original_playbook_path, 'r') as file:
-        playbook_content = file.read()
-
-    csrf_token = generate_csrf()
-    return render_template('edit_playbook.html', playbook_name=playbook_name, playbook_content=playbook_content, csrf_token=csrf_token)
+    # Render the edit page with the current playbook data
+    return render_template('edit_playbook.html', playbook=playbook)
 
 @app.route('/delete_playbook', methods=['POST'])
 @login_required
 def delete_playbook():
-    # Prompt for the passphrase
     passphrase = request.form.get('passphrase')
     
-    # Verify the passphrase
     if passphrase == DELETE_PASSPHRASE:
         playbook_name = request.form.get('playbook_name')
-        playbook_path = os.path.join('./playbooks', secure_filename(playbook_name))
-        
-        # Delete the playbook file if it exists
-        if os.path.exists(playbook_path):
-            os.remove(playbook_path)
-            flash('Playbook deleted successfully.')
+        # Ensure the playbook name is safe to use
+        playbook_name = secure_filename(playbook_name)
+
+        # Find the playbook by name
+        playbook_to_delete = Playbooks.query.filter_by(name=playbook_name).first()
+
+        if playbook_to_delete:
+            # Delete the playbook from the database
+            db.session.delete(playbook_to_delete)
+            try:
+                db.session.commit()
+                flash('Playbook deleted successfully.', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash('Error deleting playbook.', 'error')
+                app.logger.error(f'Error deleting playbook: {e}')
         else:
-            flash('Playbook not found.')
+            flash('Playbook not found.', 'error')
     else:
-        flash('Incorrect passphrase.')
+        flash('Incorrect passphrase.', 'error')
     
     return redirect(url_for('playbooks'))
 
@@ -457,6 +511,11 @@ def clear_playbook_result(playbook_name):
 def vault():
     return render_template('vault.html')
 
+@app.route('/applications')
+@login_required
+def applications():
+    return render_template('applications.html')
+
 @app.route('/chatbot')
 @login_required
 def ansibleai():
@@ -479,4 +538,14 @@ def chat():
         return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
 
 if __name__ == '__main__':
+    with app.app_context():
+        try:
+            # Use a simple read operation to force a database connection
+            # This is the correct way to execute raw SQL in SQLAlchemy 2.0
+            with db.engine.connect() as conn:
+                result = conn.execute(db.text('SELECT 1')).fetchall()
+            app.logger.info('Database connection successful')
+        except Exception as e:
+            app.logger.error(f'Database connection failed: {e}')
+
     socketio.run(app, host='0.0.0.0', debug=True, port=5000)

@@ -390,6 +390,19 @@ def show_playbook_result():
 
     return redirect(url_for('playbooks'))
 
+@app.route('/view_playbook_results/<int:playbook_id>')
+@login_required
+def view_playbook_results(playbook_id):
+    # Query all results for the given playbook ID, ordered by date_executed descending
+    results = PlaybookResults.query.filter_by(playbook_id=playbook_id).order_by(PlaybookResults.date_executed.desc()).all()
+    playbook = Playbooks.query.get(playbook_id)
+    if playbook is None:
+        flash('Playbook not found.', 'error')
+        return redirect(url_for('playbooks'))
+
+    # Render a template with the results
+    return render_template('view_playbook_results.html', playbook=playbook, results=results)
+
 @app.route('/create_playbook', methods=['GET', 'POST'])
 @login_required
 def create_playbook():
@@ -475,6 +488,9 @@ def delete_playbook():
         playbook_to_delete = Playbooks.query.filter_by(name=playbook_name).first()
 
         if playbook_to_delete:
+            # Delete associated playbook results first
+            PlaybookResults.query.filter_by(playbook_id=playbook_to_delete.id).delete()
+
             # Delete the playbook from the database
             db.session.delete(playbook_to_delete)
             try:

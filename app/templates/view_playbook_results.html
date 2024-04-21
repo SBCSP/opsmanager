@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}View Playbook Results{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-4">
+    <h1 class="text-2xl font-semibold text-gray-700 mb-4">{{ playbook.name }} - Results</h1>
+    <div class="space-y-2"> <!-- Add space between each result -->
+        {% for result in results %}
+            <div class="bg-gray-100 rounded shadow-lg"> <!-- Add shadow for depth -->
+                <button onclick="toggleResultVisibility(this)" class="flex justify-between items-center w-full text-left text-lg font-semibold p-4">
+                    Executed on: {{ result.date_executed }}
+                    <svg class="w-4 h-4 transform" :class="{ '-rotate-180': !isHidden }" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"> <!-- Dropdown arrow -->
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+                <div class="result-data hidden p-4 bg-white rounded-b"> <!-- Rounded bottom -->
+                    <pre class="whitespace-pre-wrap">{{ result.result_data }}</pre> <!-- Wrap text -->
+                </div>
+            </div>
+        {% else %}
+            <p>No results found for this playbook.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function toggleResultVisibility(button) {
+    // Find the next sibling element, which is the container for the result data
+    var resultDataDiv = button.nextElementSibling;
+    // Toggle the 'hidden' class to show/hide the result data
+    resultDataDiv.classList.toggle('hidden');
+    // Rotate the arrow icon
+    button.querySelector("svg").classList.toggle('rotate-180');
+}
+</script>
+{% endblock %}

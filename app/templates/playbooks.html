@@ -51,8 +51,14 @@
                     </button>
                 </td>
                 <td class="px-4 py-2">
-                    <!-- You will need to update this section to reflect how you are storing and accessing playbook results -->
-                    <span>No results, please run playbook.</span>
+                    {% if playbook.results.count() > 0 %}
+                        <a href="{{ url_for('view_playbook_results', playbook_id=playbook.id) }}"
+                            class="text-blue-500 hover:text-blue-700">
+                            View Results
+                        </a>
+                    {% else %}
+                        <span>No results, please run playbook.</span>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

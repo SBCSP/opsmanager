@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Running Applications{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-4">
+    <h1 class="text-2xl font-semibold text-gray-700 mb-4">Running Applications for Image: {{ container_image.image_name }}</h1>
+
+    {% if running_apps %}
+    <table class="min-w-full table-auto">
+        <thead class="bg-gray-200">
+            <tr>
+                <th class="px-4 py-2 text-left">Container ID</th>
+                <th class="px-4 py-2 text-left">Status</th>
+                <th class="px-4 py-2 text-left">Date Launched</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for app in running_apps %}
+            <tr class="border-b">
+                <td class="px-4 py-2">{{ app.container_id }}</td>
+                <td class="px-4 py-2">{{ app.status }}</td>
+                <td class="px-4 py-2">{{ app.date_launched.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="text-center text-gray-700">
+        No applications are currently running for this image.
+    </div>
+    {% endif %}
+    
+    <a href="{{ url_for('applications') }}" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mt-4">
+        Back to Applications
+    </a>
+</div>
+{% endblock %}

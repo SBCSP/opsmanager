@@ -520,13 +520,41 @@ def applications():
     # Pass the queried container images to the template
     return render_template('applications.html', container_images=container_images)
 
+@app.route('/add_app_image', methods=['GET', 'POST'])
+@login_required
+def add_app_image():
+    if request.method == 'POST':
+        image_name = request.form.get('image_name')
+        if image_name:
+            # Check if the image already exists
+            existing_image = ContainerImages.query.filter_by(image_name=image_name).first()
+            if existing_image is None:
+                new_image = ContainerImages(image_name=image_name)
+                db.session.add(new_image)
+                db.session.commit()
+                flash('Container image added successfully.', 'success')
+                return redirect(url_for('applications'))
+            else:
+                flash('Container image already exists.', 'error')
+        else:
+            flash('Image name is required.', 'error')
+
+    return render_template('add_app_image.html')
+
 @app.route('/view_running_apps/<int:image_id>')
 @login_required
 def view_running_apps(image_id):
+    # Query the container image by ID
+    container_image = ContainerImages.query.get(image_id)
+    if not container_image:
+        flash('Container image not found.', 'error')
+        return redirect(url_for('applications'))
+
     # Query all running apps for the given container image ID
     running_apps = RunningApps.query.filter_by(container_image_id=image_id).all()
-    # Render a template with the running apps
-    return render_template('view_running_apps.html', running_apps=running_apps)
+
+    # Render a template with the running apps and the container image details
+    return render_template('view_running_apps.html', running_apps=running_apps, container_image=container_image)
 
 @app.route('/launch_app/<int:image_id>', methods=['GET', 'POST'])
 @login_required

@@ -4,33 +4,45 @@
 
 {% block content %}
 <div class="max-w-6xl mx-auto px-4">
-    <!-- Header with Servers and Edit Inventory button on the same line -->
+    <!-- Header with Applications title -->
     <div class="flex justify-between items-center mb-4">
         <div class="flex items-center">
-            <img src="" alt="Logo" class="h-12 w-auto mr-2">
+            <img src="{{ url_for('static', filename='dockerlogo.jpg') }}" alt="Logo" class="h-12 w-auto mr-2">
             <h1 class="text-2xl font-semibold text-gray-700">
                 Applications
             </h1>
         </div>
     </div>
     
-    <!-- Server groups and counts in a table -->
+    <!-- Container images and running counts in a table -->
     <table class="min-w-full table-auto">
         <thead class="bg-gray-200">
             <tr>
-                <th class="px-4 py-2 text-left">Name</th>
+                <th class="px-4 py-2 text-left">Image Name</th>
                 <th class="px-4 py-2 text-left">Running</th>
                 <th class="px-4 py-2 text-left">Actions</th>
             </tr>
         </thead>
         <tbody>
-            
+            {% for image in container_images %}
             <tr class="border-b">
-                <td class="px-4 py-2"></td>
-                <td class="px-4 py-2"></td>
-                <td class="px-4 py-2"></td>
+                <td class="px-4 py-2">{{ image.image_name }}</td>
+                <td class="px-4 py-2">
+                    <a href="{{ url_for('view_running_apps', image_id=image.id) }}">
+                        {{ image.running_apps.count() }}
+                    </a>
+                </td>
+                <td class="px-4 py-2">
+                    <a href="{{ url_for('launch_app', image_id=image.id) }}" class="btn btn-primary">
+                        Launch
+                    </a>
+                </td>
             </tr>
-        
+            {% else %}
+            <tr class="border-b">
+                <td colspan="3" class="px-4 py-2 text-center">No container images found.</td>
+            </tr>
+            {% endfor %}
         </tbody>
     </table>
 </div>

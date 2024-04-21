@@ -28,7 +28,7 @@ app = Flask(__name__)
 
 from database import models
 from database.connection import db, init_db
-from database.models import Playbooks, PlaybookResults
+from database.models import Playbooks, PlaybookResults, ContainerImages, RunningApps
 init_db(app)
 app.secret_key = os.getenv('SECRET_KEY')
 csrf = CSRFProtect(app)
@@ -507,21 +507,6 @@ def delete_playbook():
     
     return redirect(url_for('playbooks'))
 
-@app.route('/clear_playbook_result/<playbook_name>', methods=['POST'])
-@login_required
-def clear_playbook_result(playbook_name):
-    # Construct the path to the results file
-    results_path = os.path.join('./static/playbook_results', secure_filename(playbook_name.rsplit('.', 1)[0] + '.yml.txt'))
-
-    # Check if the file exists and delete it
-    if os.path.exists(results_path):
-        os.remove(results_path)
-        flash('Results cleared successfully.', 'info')
-    else:
-        flash('No results found to clear.', 'info')
-
-    return redirect(url_for('playbooks'))
-
 @app.route('/vault')
 @login_required
 def vault():
@@ -530,7 +515,29 @@ def vault():
 @app.route('/applications')
 @login_required
 def applications():
-    return render_template('applications.html')
+    # Query all container images from the database
+    container_images = ContainerImages.query.all()
+    # Pass the queried container images to the template
+    return render_template('applications.html', container_images=container_images)
+
+@app.route('/view_running_apps/<int:image_id>')
+@login_required
+def view_running_apps(image_id):
+    # Query all running apps for the given container image ID
+    running_apps = RunningApps.query.filter_by(container_image_id=image_id).all()
+    # Render a template with the running apps
+    return render_template('view_running_apps.html', running_apps=running_apps)
+
+@app.route('/launch_app/<int:image_id>', methods=['GET', 'POST'])
+@login_required
+def launch_app(image_id):
+    if request.method == 'POST':
+        # Process the form data and launch the Docker container
+        # You'll need to implement the logic for launching a Docker container
+        # based on the image_id and form data provided by the user
+        pass
+    # Render a template with a form for launching a new app
+    return render_template('launch_app.html', image_id=image_id)
 
 @app.route('/chatbot')
 @login_required

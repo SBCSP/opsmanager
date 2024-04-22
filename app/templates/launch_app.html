@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Launch Application{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-4">
+    <h1 class="text-2xl font-semibold text-gray-700 mb-4">Launch Application: {{ image.image_name }}</h1>
+    <form action="{{ url_for('launch_app', image_id=image.id) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <label for="selected_host">Host:</label>
+        <select name="selected_host" id="selected_host" required>
+            {% for host in hosts %}
+            <option value="{{ host }}">{{ host }}</option>
+            {% endfor %}
+        </select>
+
+        <p>Build command: docker run -t {{ image.image_name }} -p
+            <select name="selected_port" id="selected_port" required>
+                {% for port in available_ports %}
+                <option value="{{ port }}">{{ port }}</option>
+                {% endfor %}
+            </select>
+            :{{ image.dport }} -d  <!-- Updated to use image.dport -->
+        </p>
+
+        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            Launch
+        </button>
+        <a href="{{ url_for('applications') }}" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+            Cancel
+        </a>
+    </form>
+</div>
+{% endblock %}

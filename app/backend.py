@@ -1,4 +1,5 @@
 import os
+from flask import current_app, jsonify
 import bs4
 import getpass
 from langchain import hub
@@ -17,11 +18,19 @@ from langchain.schema import (
     AIMessage
 )
 
+# Define a utility function to retrieve config values
+def get_config_value(key, default=None):
+    # Use the current_app proxy to access the app context
+    with current_app.app_context():
+        # Import AppConfig inside the function to avoid circular imports
+        from database.models import AppConfig
+        config_item = AppConfig.query.filter_by(key=key).first()
+    return config_item.value if config_item else default
+
 def response(user_query):
 
     # Load environment and get your openAI api key
-    load_dotenv()
-    openai_api_key = os.getenv("OPENAI_API_KEY")
+    openai_api_key = get_config_value("OPENAI_API_KEY")
 
 
     # Select a webpage to load the context information from

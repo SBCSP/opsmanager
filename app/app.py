@@ -1,3 +1,5 @@
+# app/app.py
+
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
@@ -21,23 +23,52 @@ from backend import response
 import logging
 
 load_dotenv()
-
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 
 from database import models
 from database.connection import db, init_db
-from database.models import Playbooks, PlaybookResults, ContainerImages, RunningApps
+from database.models import AppConfig, Playbooks, PlaybookResults, ContainerImages, RunningApps
 init_db(app)
-app.secret_key = os.getenv('SECRET_KEY')
+# app.secret_key = os.getenv('SECRET_KEY')
 csrf = CSRFProtect(app)
 socketio = SocketIO(app)
 CORS(app)
 
-EXECUTE_PASSPHRASE = os.getenv('EXECUTE_PASSPHRASE')
-DELETE_PASSPHRASE = os.getenv('DELETE_PASSPHRASE')
+# Define a utility function to retrieve config values
+def get_config_value(key, default=None):
+    # Ensure you have an application context
+    config_item = AppConfig.query.filter_by(key=key).first()
+    return config_item.value if config_item else default
 
+@app.route('/global-config', methods=['GET', 'POST'])
+@login_required
+def global_config():
+    if request.method == 'POST':
+        config_key = request.form.get('config_key')
+        config_value = request.form.get('config_value')
+        config_item = AppConfig.query.filter_by(key=config_key).first()
+        if config_item:
+            config_item.value = config_value
+        else:
+            db.session.add(AppConfig(key=config_key, value=config_value))
+        db.session.commit()
+        flash('Configuration saved successfully!', 'success')
+        return redirect(url_for('global_config'))
+
+    # Retrieve existing configuration values for the form
+    config_items = AppConfig.query.all()
+    return render_template('global_config.html', config_items=config_items)
+
+@app.route('/delete-global-value/<int:config_id>', methods=['POST'])
+@login_required
+def delete_global_value(config_id):
+    config_item = AppConfig.query.get_or_404(config_id)
+    db.session.delete(config_item)
+    db.session.commit()
+    flash('Configuration deleted successfully!', 'success')
+    return redirect(url_for('global_config'))
 
 # Load Azure AD app registration details
 @app.route("/login")
@@ -286,11 +317,11 @@ def edit_script(script_name):
 @app.route('/delete_script', methods=['POST'])
 @login_required
 def delete_script():
-    # Prompt for the passphrase
+    delete_passphrase = get_config_value('DELETE_PASSPHRASE')
     passphrase = request.form.get('passphrase')
     
     # Verify the passphrase
-    if passphrase == DELETE_PASSPHRASE:
+    if passphrase == delete_passphrase:
         script_name = request.form.get('script_name')
         script_path = os.path.join('./scripts', secure_filename(script_name))
         
@@ -317,9 +348,10 @@ def playbooks():
 
 @socketio.on('execute_playbook')
 def handle_execute_playbook(message):
+    execute_passphrase = get_config_value('EXECUTE_PASSPHRASE')
     passphrase = message.get('passphrase')
     sudo_password = message.get('sudo_password')
-    if passphrase != EXECUTE_PASSPHRASE:
+    if passphrase != execute_passphrase:
         emit('playbook_error', {'error': 'Incorrect passphrase.'})
         return
 
@@ -477,9 +509,10 @@ def edit_playbook(playbook_name):
 @app.route('/delete_playbook', methods=['POST'])
 @login_required
 def delete_playbook():
+    delete_passphrase = get_config_value('DELETE_PASSPHRASE')
     passphrase = request.form.get('passphrase')
     
-    if passphrase == DELETE_PASSPHRASE:
+    if passphrase == delete_passphrase:
         playbook_name = request.form.get('playbook_name')
         # Ensure the playbook name is safe to use
         playbook_name = secure_filename(playbook_name)
@@ -524,22 +557,80 @@ def applications():
 @login_required
 def add_app_image():
     if request.method == 'POST':
+        app_name = request.form.get('app_name')  # Retrieve the application name from the form
         image_name = request.form.get('image_name')
-        if image_name:
+        dport = request.form.get('dport')  # Retrieve the default port from the form
+
+        if app_name and image_name:
             # Check if the image already exists
             existing_image = ContainerImages.query.filter_by(image_name=image_name).first()
             if existing_image is None:
-                new_image = ContainerImages(image_name=image_name)
+                # Create a new ContainerImages instance with the app_name and dport
+                new_image = ContainerImages(app_name=app_name, image_name=image_name, dport=dport)
                 db.session.add(new_image)
-                db.session.commit()
-                flash('Container image added successfully.', 'success')
+                try:
+                    db.session.commit()
+                    flash('Container image added successfully.', 'success')
+                except Exception as e:
+                    db.session.rollback()
+                    flash('Error adding container image.', 'error')
+                    app.logger.error(f'Error adding container image: {e}')
                 return redirect(url_for('applications'))
             else:
                 flash('Container image already exists.', 'error')
         else:
-            flash('Image name is required.', 'error')
+            flash('Application name and image name are required.', 'error')
 
     return render_template('add_app_image.html')
+
+@app.route('/edit_app/<int:image_id>', methods=['GET', 'POST'])
+@login_required
+def edit_app(image_id):
+    container_image = ContainerImages.query.get_or_404(image_id)
+    
+    if request.method == 'POST':
+        container_image.image_name = request.form.get('image_name')
+        container_image.dport = request.form.get('dport')  # Update dport instead of command
+        try:
+            db.session.commit()
+            flash('Container image updated successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error updating container image.', 'error')
+            app.logger.error(f'Error updating container image: {e}')
+        return redirect(url_for('applications'))
+    
+    return render_template('edit_app.html', image=container_image)
+
+@app.route('/delete_app/<int:image_id>', methods=['POST'])
+@login_required
+def delete_app(image_id):
+    delete_passphrase = get_config_value('DELETE_PASSPHRASE')
+    passphrase = request.form.get('passphrase')
+    app.logger.debug(f"Received passphrase: {passphrase}")
+    if passphrase == delete_passphrase:
+        container_image = ContainerImages.query.get_or_404(image_id)
+        
+        # Check if there are any dependent records that need to be handled
+        # For example, if there are running apps associated with this image:
+        if container_image.running_apps.count() > 0:
+            flash('Cannot delete image because there are running apps associated with it.', 'error')
+            return redirect(url_for('applications'))
+        
+        # Proceed to delete the container image
+        db.session.delete(container_image)
+        
+        try:
+            db.session.commit()
+            flash('Container image deleted successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error deleting container image.', 'error')
+            app.logger.error(f'Error deleting container image: {e}')
+    else:
+        flash('Incorrect passphrase.', 'error')
+    
+    return redirect(url_for('applications'))
 
 @app.route('/view_running_apps/<int:image_id>')
 @login_required
@@ -559,13 +650,18 @@ def view_running_apps(image_id):
 @app.route('/launch_app/<int:image_id>', methods=['GET', 'POST'])
 @login_required
 def launch_app(image_id):
+    container_image = ContainerImages.query.get_or_404(image_id)
+    hosts = ['host1', 'host2', 'host3']  # Replace with actual host data
+    available_ports = [5000, 5001, 5002]  # Replace with logic to find available ports
+
     if request.method == 'POST':
-        # Process the form data and launch the Docker container
-        # You'll need to implement the logic for launching a Docker container
-        # based on the image_id and form data provided by the user
-        pass
-    # Render a template with a form for launching a new app
-    return render_template('launch_app.html', image_id=image_id)
+        selected_host = request.form.get('selected_host')
+        selected_port = request.form.get('selected_port')
+        
+        # Build the Docker command using the selected port and the default port (dport)
+        docker_command = f"docker run -t {container_image.image_name} -p {selected_port}:{container_image.dport} -d"
+
+    return render_template('launch_app.html', image=container_image, hosts=hosts, available_ports=available_ports)
 
 @app.route('/chatbot')
 @login_required
@@ -598,5 +694,7 @@ if __name__ == '__main__':
             app.logger.info('Database connection successful')
         except Exception as e:
             app.logger.error(f'Database connection failed: {e}')
+
+        app.secret_key = app.secret_key or get_config_value('SECRET_KEY')
 
     socketio.run(app, host='0.0.0.0', debug=True, port=5000)

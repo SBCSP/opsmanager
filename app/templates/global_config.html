@@ -1,0 +1,52 @@
+<!-- templates/global_config.html -->
+{% extends "base.html" %}
+
+{% block title %}Global Configuration{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-4">
+    <h1 class="text-2xl font-semibold text-gray-700 mb-4">Global Configuration</h1>
+    <!-- Form for adding/updating a configuration setting -->
+    <form method="post" action="{{ url_for('global_config') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-4">
+            <label for="config_key" class="block text-gray-700 text-sm font-bold mb-2">Key</label>
+            <input type="text" id="config_key" name="config_key" placeholder="Enter configuration key" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+        </div>
+        <div class="mb-4">
+            <label for="config_value" class="block text-gray-700 text-sm font-bold mb-2">Value</label>
+            <input type="text" id="config_value" name="config_value" placeholder="Enter configuration value" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+        </div>
+        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Save Configuration</button>
+    </form>
+
+    <!-- Display existing configuration settings in a table -->
+    <table class="min-w-full table-auto mt-8">
+        <thead class="bg-gray-200">
+            <tr>
+                <th class="px-4 py-2 text-left">Key</th>
+                <th class="px-4 py-2 text-left">Value</th>
+                <th class="px-4 py-2 text-left">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for config_item in config_items %}
+            <tr class="border-b">
+                <td class="px-4 py-2">{{ config_item.key }}</td>
+                <td class="px-4 py-2">{{ config_item.value }}</td>
+                <td class="px-4 py-2">
+                    <form method="post" action="{{ url_for('delete_global_value', config_id=config_item.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr class="border-b">
+                <td colspan="3" class="px-4 py-2 text-center">No configuration settings found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

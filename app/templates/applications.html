@@ -1,3 +1,4 @@
+<!-- applications.html -->
 {% extends "base.html" %}
 
 {% block title %}Apps{% endblock %}
@@ -23,6 +24,7 @@
     <table class="min-w-full table-auto">
         <thead class="bg-gray-200">
             <tr>
+                <th class="px-4 py-2 text-left">App Name</th>
                 <th class="px-4 py-2 text-left">Image Name</th>
                 <th class="px-4 py-2 text-left">Running</th>
                 <th class="px-4 py-2 text-left">Actions</th>
@@ -31,6 +33,7 @@
         <tbody>
             {% for image in container_images %}
             <tr class="border-b">
+                <td class="px-4 py-2">{{ image.app_name }}</td>
                 <td class="px-4 py-2">{{ image.image_name }}</td>
                 <td class="px-4 py-2">
                     <a href="{{ url_for('view_running_apps', image_id=image.id) }}" class="text-blue-500 hover:text-blue-700">
@@ -42,6 +45,13 @@
                         class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded">
                         Launch
                     </a>
+                    <a href="{{ url_for('edit_app', image_id=image.id) }}"
+                        class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-3 rounded ml-2">
+                        Edit
+                    </a>
+                    <button type="button" onclick="promptDeleteApp('{{ image.id }}')" class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded ml-2">
+                        Delete
+                    </button>
                 </td>
             </tr>
             {% else %}
@@ -52,4 +62,29 @@
         </tbody>
     </table>
 </div>
+<script>
+    function promptDeleteApp(imageId) {
+        var passphrase = prompt("Please enter the passphrase to delete the app:");
+        if (passphrase != null && passphrase != "") {
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{{ url_for('delete_app', image_id=0) }}".replace('/0', '/' + imageId);
+    
+            var csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = '{{ csrf_token() }}';
+            form.appendChild(csrfInput);
+    
+            var passphraseInput = document.createElement('input');
+            passphraseInput.type = 'hidden';
+            passphraseInput.name = 'passphrase';
+            passphraseInput.value = passphrase;
+            form.appendChild(passphraseInput);
+    
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+</script>
 {% endblock %}

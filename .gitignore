@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Ansible inventory.ini
+/app/inventory.ini
+
 # C extensions
 *.so
 

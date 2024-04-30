@@ -84,58 +84,46 @@ def authorized_route():
 def logout_route():
     return logout()
 
-# Dashboard route
 @app.route('/')
 @login_required
 def dashboard():
-    # Count servers from the inventory file
-    inventory_file_path = './inventory.ini'
-    parser = configparser.ConfigParser()
-    parser.read(inventory_file_path)
+    # Fetch the latest inventory configuration and parse it
+    inventory_config = InventoryConfig.query.order_by(InventoryConfig.date_updated.desc()).first()
+    if inventory_config:
+        parser = configparser.ConfigParser()
+        parser.read_string(inventory_config.content)
+        server_count = sum(len(parser.items(section)) for section in parser.sections())
+    else:
+        server_count = 0
+        flash('No inventory configuration found. Please upload inventory data.', 'warning')
 
-    server_count = sum(len(parser.items(section)) for section in parser.sections())
+    # Assuming Playbooks are stored in a DB and counted via a model
+    playbook_count = Playbooks.query.count()
 
-    # Count scripts in the scripts folder
+    # Assuming scripts are still stored in a directory, this will count them
     scripts_folder = './scripts'
-    script_files = os.listdir(scripts_folder)
-    script_count = len(script_files)
-
-    # Count playbooks in the playbooks folder
-    playbooks_folder = './playbooks'
-    playbook_files = os.listdir(playbooks_folder)
-    playbook_count = len(playbook_files)
+    script_files = (file for file in os.listdir(scripts_folder) if file.endswith('.sh'))  # assuming only files ending with .sh are counted
+    script_count = sum(1 for _ in script_files)
 
     host_ping_results = []
-
     # Define the path to the host_pings.json file
     host_pings_file_path = './static/host_ping/host_pings.json'
 
-    # Read the host_pings.json file
+    # Read and process host pings json file
     try:
         with open(host_pings_file_path, 'r') as file:
-            # Read the lines in the file
             lines = file.readlines()
-
-            # Process each line to extract host information
             for line in lines:
-                # Split the line on the pipe character to separate the host from the result
                 parts = line.split(' | ')
                 if len(parts) == 2:
-                    hostname = parts[0].strip()
-                    status_info = parts[1].strip()
-
-                    # Determine the status based on the presence of 'SUCCESS' or 'FAILED'
+                    hostname, status_info = parts[0].strip(), parts[1].strip()
                     status = 'Success' if 'SUCCESS' in status_info else 'Failed'
-
-                    # Add the host information to the list
                     host_ping_results.append({
                         'hostname': hostname,
                         'status': status
                     })
-
     except FileNotFoundError:
-        flash('Host pings file not found.')
-        host_ping_results = []
+        flash('Host pings file not found. Check the path and file permissions.', 'error')
 
     return render_template('dashboard.html', server_count=server_count,
                            script_count=script_count, playbook_count=playbook_count,
@@ -185,20 +173,6 @@ def handle_execute_command(message):
     output = subprocess.getoutput(command)
     emit('command_output', {'output': output})
     
-# @app.route('/servers')
-# @login_required
-# def servers():
-#     inventory_file_path = './inventory.ini'
-#     parser = configparser.ConfigParser()
-#     parser.read(inventory_file_path)
-
-#     server_groups = {}
-#     for section in parser.sections():
-#         # Count the number of unique keys in the section, assuming keys are IP addresses
-#         ip_count = len({key: value for key, value in parser.items(section)})
-#         server_groups[section] = ip_count
-
-#     return render_template('servers.html', server_groups=server_groups)
 
 @app.route('/servers')
 @login_required

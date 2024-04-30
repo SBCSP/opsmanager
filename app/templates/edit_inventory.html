@@ -3,14 +3,14 @@
 {% block title %}Edit Inventory{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto px-4">
-    <h1 class="text-2xl font-semibold text-gray-700">Edit Inventory</h1>
-    <form action="{{ url_for('edit_inventory') }}" method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <textarea name="content" rows="20" cols="80" class="w-full px-3 py-2 text-gray-700 border rounded-lg focus:outline-none" style="height: 300px;">{{ content }}</textarea>
-        <br>
-        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-            Save
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <h2 class="text-xl font-semibold mb-4">Edit Inventory</h2>
+    <form method="POST" action="{{ url_for('edit_inventory') }}">
+        <!-- CSRF Token -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <textarea name="inventory" rows="20" class="w-full p-2 border rounded">{% if current_inventory %}{{ current_inventory }}{% endif %}</textarea>
+        <button type="submit" class="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            Save Changes
         </button>
     </form>
 </div>

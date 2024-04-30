@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Inventory{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <h2 class="text-xl font-semibold mb-4">Upload Inventory</h2>
+    <form method="POST" action="{{ url_for('upload_inventory') }}" enctype="multipart/form-data">
+        <!-- CSRF Token -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="inventory" class="block text-sm font-medium text-gray-700">Inventory Data:</label>
+        <textarea id="inventory" name="inventory_data" rows="10" class="mt-1 block w-full p-2 border-gray-300 rounded-md shadow-sm" placeholder="Paste your inventory.ini content here..."></textarea>
+        <div class="py-4">
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Upload</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -4,6 +4,15 @@ from .connection import db
 from datetime import datetime
 
 
+class InventoryConfig(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+
+    date_updated = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<InventoryConfig {self.id} updated on {self.date_updated}>'
+
 class AppConfig(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(255), unique=True, nullable=False)

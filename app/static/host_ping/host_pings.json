@@ -1,10 +1,3 @@
-TWINGATE-HA-2 | SUCCESS => {
-    "ansible_facts": {
-        "discovered_interpreter_python": "/usr/bin/python3"
-    },
-    "changed": false,
-    "ping": "pong"
-}
 NginxPM | SUCCESS => {
     "ansible_facts": {
         "discovered_interpreter_python": "/usr/bin/python3"
@@ -12,7 +5,7 @@ NginxPM | SUCCESS => {
     "changed": false,
     "ping": "pong"
 }
-SonarQube | SUCCESS => {
+TWINGATE-HA-2 | SUCCESS => {
     "ansible_facts": {
         "discovered_interpreter_python": "/usr/bin/python3"
     },
@@ -33,6 +26,11 @@ SBCSP-Org-Runner | SUCCESS => {
     "changed": false,
     "ping": "pong"
 }
+Wazuh-SingleNode | UNREACHABLE! => {
+    "changed": false,
+    "msg": "Failed to connect to the host via ssh: ssh: connect to host 192.168.0.235 port 22: No route to host",
+    "unreachable": true
+}
 Flagship | SUCCESS => {
     "ansible_facts": {
         "discovered_interpreter_python": "/usr/bin/python3"
@@ -40,8 +38,8 @@ Flagship | SUCCESS => {
     "changed": false,
     "ping": "pong"
 }
-Wazuh-SingleNode | UNREACHABLE! => {
+SonarQube | UNREACHABLE! => {
     "changed": false,
-    "msg": "Failed to connect to the host via ssh: ssh: connect to host 192.168.0.235 port 22: No route to host",
+    "msg": "Failed to connect to the host via ssh: ssh: connect to host 192.168.0.11 port 22: Connection timed out",
     "unreachable": true
 }

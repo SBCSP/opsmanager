@@ -1,6 +1,6 @@
 # app/app.py
 
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, stream_with_context, Response
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import subprocess
@@ -21,6 +21,7 @@ import msal
 import time
 from backend import response
 import logging
+from datetime import datetime
 
 load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
@@ -29,7 +30,7 @@ app = Flask(__name__)
 
 from database import models
 from database.connection import db, init_db
-from database.models import AppConfig, Playbooks, PlaybookResults, ContainerImages, RunningApps
+from database.models import AppConfig, Playbooks, PlaybookResults, ContainerImages, RunningApps, InventoryConfig
 init_db(app)
 # app.secret_key = os.getenv('SECRET_KEY')
 csrf = CSRFProtect(app)
@@ -184,37 +185,70 @@ def handle_execute_command(message):
     output = subprocess.getoutput(command)
     emit('command_output', {'output': output})
     
+# @app.route('/servers')
+# @login_required
+# def servers():
+#     inventory_file_path = './inventory.ini'
+#     parser = configparser.ConfigParser()
+#     parser.read(inventory_file_path)
+
+#     server_groups = {}
+#     for section in parser.sections():
+#         # Count the number of unique keys in the section, assuming keys are IP addresses
+#         ip_count = len({key: value for key, value in parser.items(section)})
+#         server_groups[section] = ip_count
+
+#     return render_template('servers.html', server_groups=server_groups)
+
 @app.route('/servers')
 @login_required
 def servers():
-    inventory_file_path = './inventory.ini'
+    # Attempt to fetch the latest inventory from the database, now ordering by date_updated
+    inventory_config = InventoryConfig.query.order_by(InventoryConfig.date_updated.desc()).first()
+    if not inventory_config:
+        flash("No inventory configuration found. Please upload inventory data.", "warning")
+        return redirect(url_for('upload_inventory'))
+
+    # Use configparser to parse content
     parser = configparser.ConfigParser()
-    parser.read(inventory_file_path)
+    parser.read_string(inventory_config.content)
 
     server_groups = {}
     for section in parser.sections():
-        # Count the number of unique keys in the section, assuming keys are IP addresses
-        ip_count = len({key: value for key, value in parser.items(section)})
-        server_groups[section] = ip_count
+        server_groups[section] = len(parser.items(section))
 
     return render_template('servers.html', server_groups=server_groups)
 
 @app.route('/edit_inventory', methods=['GET', 'POST'])
 @login_required
 def edit_inventory():
-    inventory_file_path = './inventory.ini'
-    
+    inventory_config = InventoryConfig.query.order_by(InventoryConfig.id.desc()).first()
     if request.method == 'POST':
-        content = request.form['content']
-        with open(inventory_file_path, 'w') as file:
-            file.write(content)
-        flash('Inventory saved successfully.')  # Optional: Flash a success message
-        return redirect(url_for('servers'))  # Redirect to the servers route
+        inventory_text = request.form['inventory']
+        new_inventory = InventoryConfig(content=inventory_text)
+        db.session.add(new_inventory)
+        db.session.commit()
+        return redirect(url_for('servers'))
 
-    with open(inventory_file_path, 'r') as file:
-        content = file.read()
-    csrf_token = generate_csrf()
-    return render_template('edit_inventory.html', content=content, csrf_token=csrf_token)
+    # Pass the current content to the template to be edited
+    return render_template('edit_inventory.html', current_inventory=inventory_config.content if inventory_config else '')
+
+@app.route('/upload_inventory', methods=['GET', 'POST'])
+@login_required
+def upload_inventory():
+    if request.method == 'POST':
+        new_content = request.form.get("inventory_data")
+        existing_config = InventoryConfig.query.order_by(InventoryConfig.date_updated.desc()).first()
+        if existing_config:
+            existing_config.content = new_content  # Just update the content, date_updated will be set automatically
+        else:
+            new_inv = InventoryConfig(content=new_content)
+            db.session.add(new_inv)
+        
+        db.session.commit()
+        flash('Inventory updated successfully.', 'success')
+        return redirect(url_for('servers'))
+    return render_template('upload_inventory.html')
 
 @app.route('/upgradable_packages')
 @login_required
@@ -361,12 +395,21 @@ def handle_execute_playbook(message):
         emit('playbook_error', {'error': 'Playbook not found.'})
         return
 
+    # Fetch the latest inventory configuration from the database
+    inventory_config = InventoryConfig.query.order_by(InventoryConfig.date_updated.desc()).first()
+    if inventory_config is None:
+        emit('playbook_error', {'error': 'No inventory configuration available. Please upload inventory.'})
+        return
+
+    # Write the inventory data to a temporary file
+    with tempfile.NamedTemporaryFile(suffix='.ini', delete=False) as inventory_file:
+        inventory_file_path = inventory_file.name
+        inventory_file.write(inventory_config.content.encode('utf-8'))
+
     # Create a temporary file to store the playbook content
     with tempfile.NamedTemporaryFile(suffix='.yml', delete=False) as tmp_file:
         playbook_path = tmp_file.name
         tmp_file.write(playbook.content.encode('utf-8'))
-
-    inventory_file_path = '/root/pve.cloudbox/app/inventory.ini'
 
     # Prepare the command for running the Ansible playbook
     command = ['ansible-playbook', '-i', inventory_file_path, playbook_path]
@@ -381,27 +424,24 @@ def handle_execute_playbook(message):
     # Run the Ansible playbook in a subprocess
     process = subprocess.run(command, capture_output=True, text=True, env=env)
 
-    # Store the output and return code in the session
-    session['playbook_output'] = process.stdout
-    session['playbook_return_code'] = process.returncode
-
     # Create a new PlaybookResults instance and save the results to the database
     new_playbook_result = PlaybookResults(
         playbook_id=playbook.id,
-        result_data=process.stdout if process.stdout else process.stderr
+        result_data=process.stdout if process.stdout else process.stderr,
+        date_executed=datetime.utcnow()
     )
     db.session.add(new_playbook_result)
     try:
         db.session.commit()
-        # Emit an event to redirect the client to the route that will show the result
         emit('redirect', {'url': url_for('show_playbook_result', success=True)})
     except Exception as e:
         db.session.rollback()
         emit('playbook_error', {'error': 'Failed to save playbook results.'})
         app.logger.error(f'Failed to save playbook results: {e}')
 
-    # Clean up the temporary playbook file
+    # Clean up the temporary files
     os.unlink(playbook_path)
+    os.unlink(inventory_file_path)
 
 @app.route('/show_playbook_result')
 @login_required
@@ -677,12 +717,19 @@ def chat():
     if not message:
         app.logger.error("No message provided in form.")
         return jsonify({'error': 'No message provided'}), 400
-    try:
-        response_text = response(message)
-        return response_text
-    except Exception as e:
-        app.logger.error(f"Error during response processing: {e}")
-        return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
+
+    def generate():
+        try:
+            # response is now a generator, so we can iterate over it
+            for chunk in response(message):
+                yield chunk
+        except Exception as e:
+            app.logger.error(f"Error during response processing: {e}")
+            # If an error occurs, yield an error message as JSON
+            yield jsonify({'error': 'Internal server error', 'details': str(e)})
+
+    # Wrap the generator with stream_with_context and return it as a Response
+    return Response(stream_with_context(generate()), content_type='application/json')
 
 if __name__ == '__main__':
     with app.app_context():

@@ -76,6 +76,7 @@ def response(user_query):
     )
 
     try:
-        return rag_chain.invoke(user_query)
+        response_text = rag_chain.invoke(user_query)
+        yield response_text
     except Exception as e:
-        return jsonify({'error': 'Error processing the request', 'details': str(e)}), 500
+        raise e

@@ -49,31 +49,54 @@
 			const minute = date.getMinutes();
 			const str_time = hour + ":" + minute;
 			var rawText = $("#text").val();
-	
 			var userHtml = '<div class="flex justify-end mb-4"><div class="bg-gray-300 p-2 rounded">' + rawText + '<span class="text-sm text-gray-600">' + str_time + '</span></div></div>';
-	
+			
 			$("#text").val("");
 			$("#messageFormeight").append(userHtml);
-	
-			$.ajax({
-				data: {
-					msg: rawText,
-					csrf_token: $('input[name="csrf_token"]').val()
-				},
-				type: "POST",
-				url: "/chat",
+			
+			fetch('/chat', {
+				method: 'POST',
 				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
 					'X-CSRFToken': $('input[name="csrf_token"]').val()
-				}
-			}).done(function(data) {
-				// Check and format response for lists and code blocks
+				},
+				body: 'msg=' + encodeURIComponent(rawText) + '&csrf_token=' + encodeURIComponent($('input[name="csrf_token"]').val())
+			}).then(response => {
+				const reader = response.body.getReader();
+				return new ReadableStream({
+					start(controller) {
+						function push() {
+							reader.read().then(({done, value}) => {
+								if (done) {
+									controller.close();
+									return;
+								}
+								controller.enqueue(value);
+								push();
+							}).catch(error => {
+								console.error(error);
+								controller.error(error);
+							});
+						}
+						push();
+					}
+				});
+			}).then(stream => {
+				return new Response(stream);
+			}).then(response => {
+				return response.text();
+			}).then(data => {
 				var formattedData = formatResponse(data);
 				var botHtml = '<div class="flex justify-start mb-4"><div class="bg-blue-100 p-2 rounded">' + formattedData + '<span class="text-sm text-gray-600">' + str_time + '</span></div></div>';
 				$("#messageFormeight").append($.parseHTML(botHtml));
 				hideLoading();
 				adjustChatHeight();
+			}).catch(error => {
+				console.error('Fetch error:', error);
+				hideLoading();
 			});
 		});
+		// ... rest of your code ...
 	});
 
 	function adjustChatHeight() {

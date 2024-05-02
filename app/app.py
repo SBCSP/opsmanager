@@ -3,15 +3,16 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session, stream_with_context, Response
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
-import subprocess
+import subprocess, os
 from flask_wtf import CSRFProtect
 from flask_wtf.csrf import generate_csrf
 import configparser
 from collections import defaultdict
+import requests, openai
+import json
 import sys
 sys.path.append('/root/pve.cloudbox/app')
 import tempfile
-import os
 import subprocess
 from werkzeug.utils import secure_filename
 from flask import flash
@@ -19,9 +20,13 @@ from dotenv import load_dotenv
 from azure_auth import login, authorized, logout, login_required
 import msal
 import time
-from backend import response
+# from backend import response
 import logging
 from datetime import datetime
+import os
+import json
+from flask import Flask, request, jsonify
+from werkzeug.utils import secure_filename
 
 load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
@@ -30,7 +35,7 @@ app = Flask(__name__)
 
 from database import models
 from database.connection import db, init_db
-from database.models import AppConfig, Playbooks, PlaybookResults, ContainerImages, RunningApps, InventoryConfig
+from database.models import AppConfig, Playbooks, PlaybookResults, ContainerImages, RunningApps, InventoryConfig, HostStatus
 init_db(app)
 # app.secret_key = os.getenv('SECRET_KEY')
 csrf = CSRFProtect(app)
@@ -87,77 +92,79 @@ def logout_route():
 @app.route('/')
 @login_required
 def dashboard():
-    # Fetch the latest inventory configuration and parse it
-    inventory_config = InventoryConfig.query.order_by(InventoryConfig.date_updated.desc()).first()
-    if inventory_config:
-        parser = configparser.ConfigParser()
-        parser.read_string(inventory_config.content)
-        server_count = sum(len(parser.items(section)) for section in parser.sections())
-    else:
-        server_count = 0
-        flash('No inventory configuration found. Please upload inventory data.', 'warning')
+    # Fetch the latest host statuses from the database
+    host_ping_results = HostStatus.query.order_by(HostStatus.last_checked.desc()).all()
 
-    # Assuming Playbooks are stored in a DB and counted via a model
+    # Calculate other statistics as necessary
     playbook_count = Playbooks.query.count()
-
-    # Assuming scripts are still stored in a directory, this will count them
     scripts_folder = './scripts'
-    script_files = (file for file in os.listdir(scripts_folder) if file.endswith('.sh'))  # assuming only files ending with .sh are counted
-    script_count = sum(1 for _ in script_files)
+    script_files = [(file for file in os.listdir(scripts_folder) if file.endswith('.sh'))]
+    script_count = len(list(script_files))
 
-    host_ping_results = []
-    # Define the path to the host_pings.json file
-    host_pings_file_path = './static/host_ping/host_pings.json'
-
-    # Read and process host pings json file
-    try:
-        with open(host_pings_file_path, 'r') as file:
-            lines = file.readlines()
-            for line in lines:
-                parts = line.split(' | ')
-                if len(parts) == 2:
-                    hostname, status_info = parts[0].strip(), parts[1].strip()
-                    status = 'Success' if 'SUCCESS' in status_info else 'Failed'
-                    host_ping_results.append({
-                        'hostname': hostname,
-                        'status': status
-                    })
-    except FileNotFoundError:
-        flash('Host pings file not found. Check the path and file permissions.', 'error')
-
-    return render_template('dashboard.html', server_count=server_count,
-                           script_count=script_count, playbook_count=playbook_count,
+    # 'server_count' can be assumed to be the count of unique hosts
+    server_count = len(host_ping_results)
+    
+    return render_template('dashboard.html', 
+                           server_count=server_count, 
+                           script_count=script_count, 
+                           playbook_count=playbook_count, 
                            host_ping_results=host_ping_results)
 
 @app.route('/execute_ping', methods=['POST'])
 def execute_ping():
-    inventory_file_path = '/root/pve.cloudbox/app/inventory.ini'
-    host_ping_dir = '/root/pve.cloudbox/app/static/host_ping'
-    
-    # Ensure the host_ping directory exists
-    os.makedirs(host_ping_dir, exist_ok=True)
-    
-    # Define the command to run with the absolute path to the inventory file
+    # Query the latest inventory configuration from the database
+    inventory_config = InventoryConfig.query.order_by(InventoryConfig.date_updated.desc()).first()
+    if not inventory_config:
+        flash('No inventory data available. Please update inventory first.', 'error')
+        return redirect(url_for('dashboard'))
+
+    # Create a temporary file for the inventory
+    with tempfile.NamedTemporaryFile('w', delete=False) as tmp_inventory:
+        tmp_inventory.write(inventory_config.content)
+        inventory_file_path = tmp_inventory.name
+
+    # Prepare and execute the Ansible ping command
     command = ['ansible', 'all', '-m', 'ping', '-i', inventory_file_path]
-    
-    # Run the command and capture the output
     process = subprocess.run(command, capture_output=True, text=True)
     
-    # Define the path to the output file
-    output_file_path = os.path.join(host_ping_dir, 'host_pings.json')
-    
-    # Write the output to the file
-    with open(output_file_path, 'w') as output_file:
-        output_file.write(process.stdout)
-    
-    # Check if there were any unreachable hosts
+    # Clean up the temporary file
+    os.unlink(inventory_file_path)
+
     if process.returncode != 0:
-        # Log the stderr for debugging
-        app.logger.error(f"Ansible ping command had unreachable hosts: {process.stderr}")
-        flash('Ping execution complete with some unreachable hosts.')
-    else:
-        flash('Ping execution successful.')
-    
+        app.logger.error(f"Ansible ping errors: {process.stderr}")
+        # Even if errors occur, they could be partial (some hosts might be unreachable, others could be successful).
+
+    try:
+        # Parse output assuming typical ansible format
+        results = {}
+        stdout_lines = process.stdout.splitlines()
+        for line in stdout_lines:
+            line = line.strip()
+            if "|" in line:
+                hostname, status_info = line.split("|", 1)
+                hostname = hostname.strip()
+                if "UNREACHABLE" in status_info:
+                    result = "Failed"
+                elif "SUCCESS" in status_info:
+                    result = "Success"
+                else:
+                    result = "Unknown"
+                
+                # Update the database record for each host
+                host_status = HostStatus.query.filter_by(hostname=hostname).first()
+                if host_status:
+                    host_status.status = result
+                    host_status.last_checked = datetime.utcnow()
+                else:
+                    host_status = HostStatus(hostname=hostname, status=result)
+                    db.session.add(host_status)
+        
+        db.session.commit()
+        flash('Ping execution complete. Statuses updated.', 'success')
+    except Exception as e:
+        app.logger.error(f"Failed to parse ansible output or update database: {e}")
+        flash('Failed to update status due to an internal error. Check system logs.', 'error')
+
     return redirect(url_for('dashboard'))
 
 @app.route('/active_terminal')
@@ -677,33 +684,59 @@ def launch_app(image_id):
 
     return render_template('launch_app.html', image=container_image, hosts=hosts, available_ports=available_ports)
 
-@app.route('/chatbot')
-@login_required
-def ansibleai():
-    return render_template('ansibleai.html')
 
+@app.route('/chatbot', methods=["GET", "POST"])
+def chatbot_route():
+    if request.method == "GET":
+        # Retrieve and set the OpenAI API key from the database at the start of a session
+        openai.api_key = get_config_value('OPENAI_API_KEY')
+        session['messages'] = [{
+            "role": "system", "content": "You are a helpful assistant."
+        }]
+        return render_template('chatbot.html')
+    
+    message = request.form['message']
+    if message.lower() == "quit":
+        return redirect(url_for('chatbot_route'))
+    
+    # Retrieve session messages
+    messages = session.get('messages', [])
+    messages.append({"role": "user", "content": message})
+    
+    # Ensure OpenAI API key is set for subsequent requests within the session
+    openai.api_key = openai.api_key or get_config_value('OPENAI_API_KEY')
+    
+    # Request gpt-3.5-turbo for chat completion
+    response = openai.ChatCompletion.create(
+        model="gpt-4-turbo",
+        messages=messages
+    )
+    
+    # Parse the response
+    chat_message = response['choices'][0]['message']['content']
+    messages.append({"role": "assistant", "content": chat_message})
+    session['messages'] = messages  # Update the session with new messages
+    
+    return render_template('chatbot.html', messages=messages)
 
-@app.route('/chat', methods=['POST'])
-@login_required
-def chat():
-    message = request.form.get('msg')
-    app.logger.debug(f"Received message: {message}")
-    if not message:
-        app.logger.error("No message provided in form.")
-        return jsonify({'error': 'No message provided'}), 400
+# @app.route('/chat', methods=['POST'])
+# @login_required
+# def chat():
+#     message = request.form.get('msg')
+#     app.logger.debug(f"Received message: {message}")
+#     if not message:
+#         app.logger.error("No message provided in form.")
+#         return jsonify({'error': 'No message provided'}), 400
 
-    def generate():
-        try:
-            # response is now a generator, so we can iterate over it
-            for chunk in response(message):
-                yield chunk
-        except Exception as e:
-            app.logger.error(f"Error during response processing: {e}")
-            # If an error occurs, yield an error message as JSON
-            yield jsonify({'error': 'Internal server error', 'details': str(e)})
+#     def generate():
+#         try:
+#             for chunk in response(message):
+#                 yield f"data: {json.dumps(chunk)}\n\n"
+#         except Exception as e:
+#             app.logger.error(f"Error during response processing: {e}")
+#             yield f"data: {json.dumps({'error': 'Internal server error', 'details': str(e)})}\n\n"
 
-    # Wrap the generator with stream_with_context and return it as a Response
-    return Response(stream_with_context(generate()), content_type='application/json')
+#     return Response(stream_with_context(generate()), content_type='text/event-stream')
 
 if __name__ == '__main__':
     with app.app_context():

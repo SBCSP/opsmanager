@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Chatbot{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-4">
+    <h1 class="text-2xl font-semibold text-gray-700 mb-4">OpeManager AI</h1>
+    <div id="chat" class="mb-4 p-4 bg-white shadow-md rounded-lg h-96 overflow-y-auto">
+        {% for msg in messages %}
+            <div class="{% if msg.role == 'user' %}text-right{% else %}text-left{% endif %}">
+                <p class="inline-block bg-{{ 'blue-200' if msg.role == 'user' else 'green-200' }} text-{{ 'blue-600' if msg.role == 'user' else 'green-600' }} font-bold p-3 rounded-lg max-w-xs mx-2 my-1">
+                    {{ msg.content }}
+                </p>
+            </div>
+        {% endfor %}
+    </div>
+    <form action="{{ url_for('chatbot_route') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="flex mb-4">
+            <input type="text" name="message" autofocus placeholder="Type your message here..." class="flex-grow px-3 py-2 mr-4 text-gray-700 border rounded-lg focus:outline-none">
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Send
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

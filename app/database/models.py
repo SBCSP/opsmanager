@@ -12,6 +12,15 @@ class InventoryConfig(db.Model):
 
     def __repr__(self):
         return f'<InventoryConfig {self.id} updated on {self.date_updated}>'
+    
+class HostStatus(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    hostname = db.Column(db.String(255), nullable=False, unique=True)
+    status = db.Column(db.String(50), nullable=False)
+    last_checked = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<HostStatus {self.hostname} {self.status}>'
 
 class AppConfig(db.Model):
     id = db.Column(db.Integer, primary_key=True)

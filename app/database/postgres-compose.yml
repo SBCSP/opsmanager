@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: opsmanager_postgres
+    environment:
+      POSTGRES_DB: opsmanager       # Replace with your database name
+      POSTGRES_USER: opsmanager         # Replace with your database user
+      POSTGRES_PASSWORD: opsmanager # Replace with your database password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432" # Map PostgreSQL port to host
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local

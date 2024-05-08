@@ -11,7 +11,7 @@ from collections import defaultdict
 import requests, openai
 import json
 import sys
-sys.path.append('/root/pve.cloudbox/app')
+sys.path.append('/home/jldroid/repos/opsmanager/app')
 import tempfile
 import subprocess
 from werkzeug.utils import secure_filename
@@ -27,11 +27,15 @@ import os
 import json
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
+import logging
 
 load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your-very-secret-key' 
+essential_keys = ['SECRET_KEY', 'REDIRECT_FORCE', 'AUTHORITY', 'CLIENT_SECRET', 'CLIENT_ID']
+
 
 from database import models
 from database.connection import db, init_db
@@ -39,14 +43,58 @@ from database.models import AppConfig, Playbooks, PlaybookResults, ContainerImag
 init_db(app)
 # app.secret_key = os.getenv('SECRET_KEY')
 csrf = CSRFProtect(app)
+csrf.init_app(app)
 socketio = SocketIO(app)
 CORS(app)
+
+
+@app.before_request
+def initial_setup_check():
+    if request.path == '/setup':
+        return  # Skip the check if the current request is for the setup page
+    logging.debug("Initial setup check...")
+    missing_keys = [key for key in essential_keys if get_config_value(key) is None]
+    if missing_keys:
+        return redirect(url_for('setup'))
+
+@app.before_request
+def ensure_secret_key_and_csrf():
+    if 'SECRET_KEY' not in app.config or not app.config['SECRET_KEY']:
+        # Use a temporary key if not set, ideally should come from a more secure source or settings
+        app.config['SECRET_KEY'] = 'temporary_secret_key'
 
 # Define a utility function to retrieve config values
 def get_config_value(key, default=None):
     # Ensure you have an application context
     config_item = AppConfig.query.filter_by(key=key).first()
     return config_item.value if config_item else default
+
+def save_config(key, value):
+    config_item = AppConfig.query.filter_by(key=key).first()
+    if config_item:
+        config_item.value = value  # Update the existing config
+    else:
+        new_config = AppConfig(key=key, value=value)  # Create a new config entry
+        db.session.add(new_config)
+    db.session.commit()  # Commit changes to the database
+
+
+@app.route('/setup', methods=['GET', 'POST'])
+def setup():
+    essential_keys = ['SECRET_KEY', 'REDIRECT_FORCE', 'AUTHORITY', 'CLIENT_SECRET', 'CLIENT_ID']
+    if request.method == 'POST':
+        for key in request.form:
+            save_config(key, request.form[key])
+
+        # Optionally, update the secret key in the app configuration dynamically
+        app.config['SECRET_KEY'] = request.form.get('SECRET_KEY', app.config['SECRET_KEY'])
+
+        flash('Configuration saved successfully!', 'success')
+        return redirect(url_for('dashboard'))
+
+    # Fetch current configurations to display in the form
+    current_config = {key: get_config_value(key, '') for key in essential_keys}
+    return render_template('setup.html', config=current_config)
 
 @app.route('/global-config', methods=['GET', 'POST'])
 @login_required
@@ -719,24 +767,6 @@ def chatbot_route():
     
     return render_template('chatbot.html', messages=messages)
 
-# @app.route('/chat', methods=['POST'])
-# @login_required
-# def chat():
-#     message = request.form.get('msg')
-#     app.logger.debug(f"Received message: {message}")
-#     if not message:
-#         app.logger.error("No message provided in form.")
-#         return jsonify({'error': 'No message provided'}), 400
-
-#     def generate():
-#         try:
-#             for chunk in response(message):
-#                 yield f"data: {json.dumps(chunk)}\n\n"
-#         except Exception as e:
-#             app.logger.error(f"Error during response processing: {e}")
-#             yield f"data: {json.dumps({'error': 'Internal server error', 'details': str(e)})}\n\n"
-
-#     return Response(stream_with_context(generate()), content_type='text/event-stream')
 
 if __name__ == '__main__':
     with app.app_context():

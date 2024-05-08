@@ -6,7 +6,7 @@ __pycache__/
 # Ansible inventory.ini
 /app/inventory.ini
 
-/migrations/
+app/migrations/
 
 # C extensions
 *.so

@@ -1,0 +1,44 @@
+<!-- templates/setup.html -->
+{% extends "base.html" %}
+
+{% block title %}Initial Setup{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-4">
+    <p>In order to use OpsManager the below values must be entered!</p>
+    <h1 class="text-2xl font-semibold text-gray-700 mb-4">Initial Setup</h1>
+    <!-- Form for adding/updating configuration settings -->
+    <form method="post" action="{{ url_for('setup') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% for key, value in config.items() %}
+        <div class="mb-4">
+            <label for="{{ key }}" class="block text-gray-700 text-sm font-bold mb-2">{{ key }}</label>
+            <input type="text" id="{{ key }}" name="{{ key }}" placeholder="Enter {{ key }}" value="{{ value or '' }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+        </div>
+        {% endfor %}
+        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Save Configuration</button>
+    </form>
+
+    <!-- Display existing configuration settings in a table -->
+    <table class="min-w-full table-auto mt-8">
+        <thead class="bg-gray-200">
+            <tr>
+                <th class="px-4 py-2 text-left">Key</th>
+                <th class="px-4 py-2 text-left">Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for key, value in config.items() %}
+            <tr class="border-b">
+                <td class="px-4 py-2">{{ key }}</td>
+                <td class="px-4 py-2">{{ value or 'Not set' }}</td>
+            </tr>
+            {% else %}
+            <tr class="border-b">
+                <td colspan="2" class="px-4 py-2 text-center">No configuration settings found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

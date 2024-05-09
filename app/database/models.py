@@ -48,6 +48,7 @@ class PlaybookResults(db.Model):
 
     def __repr__(self):
         return f'<PlaybookResults {self.id} for Playbook {self.playbook_id}>'
+
     
 class ContainerImages(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -69,3 +70,12 @@ class RunningApps(db.Model):
 
     def __repr__(self):
         return f'<RunningApp {self.container_id} using Image {self.container_image_id}>'
+    
+class Vault(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(255), nullable=False, unique=True)
+    file_size = db.Column(db.Integer, nullable=False)  # size in bytes
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Vault {self.filename}>'

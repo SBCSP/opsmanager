@@ -4,32 +4,100 @@
 
 {% block content %}
 <div class="max-w-6xl mx-auto px-4">
-    <!-- Header with Servers and Edit Inventory button on the same line -->
+    <!-- Header with Vault logo and File Upload form -->
     <div class="flex justify-between items-center mb-4">
         <div class="flex items-center">
             <img src="{{ url_for('static', filename='vaultlogo1.jpg') }}" alt="Logo" class="h-12 w-auto mr-2">
-            <h3 class="text-2xl font-semibold text-gray-700">
-                Vault
-            </h3>
+            <h3 class="text-2xl font-semibold text-gray-700">Vault</h3>
         </div>
+        <!-- File Upload Form -->
+        <form id="upload-form" action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="flex items-center">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="file" name="file" class="mr-2 bg-white">
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Upload File</button>
+        </form>
     </div>
     
-    <!-- Server groups and counts in a table -->
+    <!-- Table displaying Vault items -->
     <table class="min-w-full table-auto">
         <thead class="bg-gray-200">
             <tr>
-                <th class="px-4 py-2 text-left">Filename</th>
+                <th class="px-4 py-2 text-left">Name</th>
+                <th class="px-4 py-2 text-left">Size (KB)</th>
                 <th class="px-4 py-2 text-left">Date Created</th>
+                <th class="px-4 py-2 text-left">Actions</th>
             </tr>
         </thead>
         <tbody>
-            
+            {% for item in items %}
             <tr class="border-b">
-                <td class="px-4 py-2"></td>
-                <td class="px-4 py-2"></td>
+                <td class="px-4 py-2">{{ item.filename }}</td>
+                <td class="px-4 py-2">{{ (item.file_size / 1024) | round(1) }} KB</td>
+                <td class="px-4 py-2">{{ item.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td class="px-4 py-2">
+                    <div style="display: flex; justify-content: start; align-items: center; gap: 10px;">
+                        <!-- Delete Button -->
+                        <button type="button" class="delete-btn bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded"
+                            data-id="{{ item.id }}" data-url="{{ url_for('delete_vault_item', id=item.id) }}">
+                            Delete
+                        </button>
+                        <!-- Download Button -->
+                        <a href="{{ url_for('download_file', id=item.id) }}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded">Download</a>
+                    </div>
+                </td>
             </tr>
-        
+            {% endfor %}
         </tbody>
     </table>
 </div>
+
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const uploadForm = document.getElementById('upload-form');
+        const spinner = document.getElementById('loading-spinner');
+    
+        // Show spinner when a file is being uploaded
+        uploadForm.addEventListener('submit', function() {
+            if (uploadForm['file'].files.length > 0) {
+                spinner.classList.remove('hidden');  // Show spinner
+            }
+        });
+    
+        // Handle delete button clicks
+        const deleteButtons = document.querySelectorAll('.delete-btn');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();  // Stop the button from submitting traditionally
+                const deleteUrl = this.getAttribute('data-url');  // Get the URL from the data attribute
+                const passphrase = prompt('Please enter passphrase to confirm deletion:');
+                
+                if (passphrase) {
+                    var form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = deleteUrl;  // Set the action to the URL from data attribute
+    
+                    // CSRF token field
+                    var csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = 'csrf_token';
+                    csrfInput.value = '{{ csrf_token() }}';
+                    form.appendChild(csrfInput);
+    
+                    var passphraseInput = document.createElement('input');
+                    passphraseInput.type = 'hidden';
+                    passphraseInput.name = 'passphrase';
+                    passphraseInput.value = passphrase;
+                    form.appendChild(passphraseInput);
+    
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
+    });
+</script>
+    
+{% endblock %}
 {% endblock %}

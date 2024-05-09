@@ -1,6 +1,6 @@
 # app/app.py
 
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session, stream_with_context, Response
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, stream_with_context, Response, send_file
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import subprocess, os
@@ -11,7 +11,7 @@ from collections import defaultdict
 import requests, openai
 import json
 import sys
-sys.path.append('/home/jldroid/repos/opsmanager/app')
+sys.path.append('/home/configman/repos/opsmanager/app')
 import tempfile
 import subprocess
 from werkzeug.utils import secure_filename
@@ -27,6 +27,10 @@ import os
 import json
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
+from cryptography.fernet import Fernet
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
+# from crypto.crypto_utils import encrypt_content, decrypt_content
 import logging
 
 load_dotenv()
@@ -35,11 +39,12 @@ logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-very-secret-key' 
 essential_keys = ['SECRET_KEY', 'REDIRECT_FORCE', 'AUTHORITY', 'CLIENT_SECRET', 'CLIENT_ID']
-
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+VAULT_ITEMS_DIR = os.path.join(BASE_DIR, 'vault_items')
 
 from database import models
 from database.connection import db, init_db
-from database.models import AppConfig, Playbooks, PlaybookResults, ContainerImages, RunningApps, InventoryConfig, HostStatus
+from database.models import AppConfig, Playbooks, PlaybookResults, ContainerImages, RunningApps, InventoryConfig, HostStatus, Vault
 init_db(app)
 # app.secret_key = os.getenv('SECRET_KEY')
 csrf = CSRFProtect(app)
@@ -140,23 +145,33 @@ def logout_route():
 @app.route('/')
 @login_required
 def dashboard():
+    # Calculate the total size of files in the vault in MB
+    total_vault_size = db.session.query(func.sum(Vault.file_size)).scalar() or 0
+    total_vault_size_mb = total_vault_size / (1024 * 1024)  # Convert bytes to MB
     # Fetch the latest host statuses from the database
     host_ping_results = HostStatus.query.order_by(HostStatus.last_checked.desc()).all()
 
     # Calculate other statistics as necessary
     playbook_count = Playbooks.query.count()
-    scripts_folder = './scripts'
-    script_files = [(file for file in os.listdir(scripts_folder) if file.endswith('.sh'))]
-    script_count = len(list(script_files))
+    # scripts_folder = './scripts'
+    # script_files = [(file for file in os.listdir(scripts_folder) if file.endswith('.sh'))]
+    # script_count = len(list(script_files))
 
     # 'server_count' can be assumed to be the count of unique hosts
     server_count = len(host_ping_results)
     
     return render_template('dashboard.html', 
-                           server_count=server_count, 
-                           script_count=script_count, 
-                           playbook_count=playbook_count, 
+                           server_count=server_count,  
+                           playbook_count=playbook_count,
+                           total_vault_size_mb=round(total_vault_size_mb, 2),
                            host_ping_results=host_ping_results)
+
+
+@app.route('/profile')
+@login_required
+def profile():
+    user_info = session.get('user', {})  # Retrieve user info from session
+    return render_template('profile.html', user=user_info)
 
 @app.route('/execute_ping', methods=['POST'])
 def execute_ping():
@@ -235,7 +250,7 @@ def servers():
     # Attempt to fetch the latest inventory from the database, now ordering by date_updated
     inventory_config = InventoryConfig.query.order_by(InventoryConfig.date_updated.desc()).first()
     if not inventory_config:
-        flash("No inventory configuration found. Please upload inventory data.", "warning")
+        flash("No inventory configuration found. Please upload inventory data.", "error")
         return redirect(url_for('upload_inventory'))
 
     # Use configparser to parse content
@@ -293,93 +308,93 @@ def upgradable_packages():
 
     return render_template('upgradable_packages.html', package_data=package_data)
 
-@app.route('/scripts')
-@login_required
-def scripts():
-    scripts_folder = './scripts'
-    script_files = os.listdir(scripts_folder)
+# @app.route('/scripts')
+# @login_required
+# def scripts():
+#     scripts_folder = './scripts'
+#     script_files = os.listdir(scripts_folder)
 
-    # Optionally, filter out non-script files if needed
-    # script_files = [f for f in script_files if f.endswith('.sh')]  # Example for shell scripts
+#     # Optionally, filter out non-script files if needed
+#     # script_files = [f for f in script_files if f.endswith('.sh')]  # Example for shell scripts
 
-    return render_template('scripts.html', script_files=script_files)
+#     return render_template('scripts.html', script_files=script_files)
 
-@socketio.on('execute_script')
-def handle_execute_script(message):
-    script_name = message['script_name']
-    script_path = os.path.join('./scripts', secure_filename(script_name))
+# @socketio.on('execute_script')
+# def handle_execute_script(message):
+#     script_name = message['script_name']
+#     script_path = os.path.join('./scripts', secure_filename(script_name))
 
-    # Emit an event to the client to open the terminal window
-    emit('open_terminal', {'script_name': script_name})
+#     # Emit an event to the client to open the terminal window
+#     emit('open_terminal', {'script_name': script_name})
 
-    # Run the script in a subprocess
-    process = subprocess.Popen(['bash', script_path], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+#     # Run the script in a subprocess
+#     process = subprocess.Popen(['bash', script_path], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
-    # Stream the output back to the client
-    def generate():
-        for line in process.stdout:
-            line = line.decode('utf-8') if isinstance(line, bytes) else line
-            socketio.emit('script_output', {'data': line})  # Broadcasting to all clients
-        process.stdout.close()
-        return_code = process.wait()
-        socketio.emit('script_ended', {'exit_code': return_code})  # Broadcasting to all clients
+#     # Stream the output back to the client
+#     def generate():
+#         for line in process.stdout:
+#             line = line.decode('utf-8') if isinstance(line, bytes) else line
+#             socketio.emit('script_output', {'data': line})  # Broadcasting to all clients
+#         process.stdout.close()
+#         return_code = process.wait()
+#         socketio.emit('script_ended', {'exit_code': return_code})  # Broadcasting to all clients
 
-    socketio.start_background_task(generate)
+#     socketio.start_background_task(generate)
 
-@app.route('/create_script', methods=['GET', 'POST'])
-@login_required
-def create_script():
-    if request.method == 'POST':
-        script_name = request.form['script_name']
-        script_content = request.form['script_content']
+# @app.route('/create_script', methods=['GET', 'POST'])
+# @login_required
+# def create_script():
+#     if request.method == 'POST':
+#         script_name = request.form['script_name']
+#         script_content = request.form['script_content']
 
-        # Ensure the script name is safe to use as a file name
-        script_name = secure_filename(script_name)
+#         # Ensure the script name is safe to use as a file name
+#         script_name = secure_filename(script_name)
 
-        # Path to the scripts folder
-        scripts_folder = './scripts'
-        script_path = os.path.join(scripts_folder, script_name)
+#         # Path to the scripts folder
+#         scripts_folder = './scripts'
+#         script_path = os.path.join(scripts_folder, script_name)
 
-        # Save the script content to a file
-        with open(script_path, 'w') as file:
-            file.write(script_content)
+#         # Save the script content to a file
+#         with open(script_path, 'w') as file:
+#             file.write(script_content)
         
-        # Redirect to a confirmation page or back to the script form
-        return redirect(url_for('scripts'))
+#         # Redirect to a confirmation page or back to the script form
+#         return redirect(url_for('scripts'))
 
-    csrf_token = generate_csrf()
-    return render_template('create_script.html', csrf_token=csrf_token)
+#     csrf_token = generate_csrf()
+#     return render_template('create_script.html', csrf_token=csrf_token)
 
-@app.route('/edit_script/<script_name>', methods=['GET', 'POST'])
-@login_required
-def edit_script(script_name):
-    scripts_folder = './scripts'
-    original_script_path = os.path.join(scripts_folder, secure_filename(script_name))
+# @app.route('/edit_script/<script_name>', methods=['GET', 'POST'])
+# @login_required
+# def edit_script(script_name):
+#     scripts_folder = './scripts'
+#     original_script_path = os.path.join(scripts_folder, secure_filename(script_name))
 
-    if request.method == 'POST':
-        new_script_name = request.form['new_script_name']
-        new_script_path = os.path.join(scripts_folder, secure_filename(new_script_name))
-        script_content = request.form['script_content']
+#     if request.method == 'POST':
+#         new_script_name = request.form['new_script_name']
+#         new_script_path = os.path.join(scripts_folder, secure_filename(new_script_name))
+#         script_content = request.form['script_content']
 
-        # Rename the file if the new name is different from the original
-        if new_script_path != original_script_path:
-            os.rename(original_script_path, new_script_path)
+#         # Rename the file if the new name is different from the original
+#         if new_script_path != original_script_path:
+#             os.rename(original_script_path, new_script_path)
 
-        # Save the updated content to the file
-        with open(new_script_path, 'w') as file:
-            file.write(script_content)
+#         # Save the updated content to the file
+#         with open(new_script_path, 'w') as file:
+#             file.write(script_content)
 
-        return redirect(url_for('scripts'))
+#         return redirect(url_for('scripts'))
 
-    with open(original_script_path, 'r') as file:
-        script_content = file.read()
+#     with open(original_script_path, 'r') as file:
+#         script_content = file.read()
 
-    csrf_token = generate_csrf()
-    return render_template('edit_script.html', script_name=script_name, script_content=script_content, csrf_token=csrf_token)
+#     csrf_token = generate_csrf()
+#     return render_template('edit_script.html', script_name=script_name, script_content=script_content, csrf_token=csrf_token)
 
-@app.route('/delete_script', methods=['POST'])
-@login_required
-def delete_script():
+# @app.route('/delete_script', methods=['POST'])
+# @login_required
+# def delete_script():
     delete_passphrase = get_config_value('DELETE_PASSPHRASE')
     passphrase = request.form.get('passphrase')
     
@@ -612,7 +627,76 @@ def delete_playbook():
 @app.route('/vault')
 @login_required
 def vault():
-    return render_template('vault.html')
+    # Query all vault items from the database
+    vault_items = Vault.query.all()
+    return render_template('vault.html', items=vault_items)
+
+@app.route('/vault/upload', methods=['POST'])
+@login_required
+def upload_file():
+    file = request.files['file']
+    if file:
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(VAULT_ITEMS_DIR, filename)
+        # Check if file already exists in the directory to avoid saving it again
+        if not os.path.exists(file_path):
+            file.save(file_path)
+            file_size = os.path.getsize(file_path)
+
+            try:
+                new_file = Vault(filename=filename, file_size=file_size)
+                db.session.add(new_file)
+                db.session.commit()
+                flash('File successfully uploaded!', 'success')
+            except IntegrityError:
+                db.session.rollback()
+                flash('A file with this name already exists. Please rename your file or delete the existing one.', 'error')
+        else:
+            flash('A file with this name already exists in the Vault.', 'error')
+    else:
+        flash('No file selected for upload.', 'error')
+
+    return redirect(url_for('vault'))
+
+
+@app.route('/vault/download/<int:id>')
+@login_required
+def download_file(id):
+    file = Vault.query.get_or_404(id)
+    file_path = os.path.join(VAULT_ITEMS_DIR, file.filename)
+    if not os.path.exists(file_path):
+        flash('File not found.', 'error')
+        return redirect(url_for('vault'))
+    try:
+        return send_file(file_path, as_attachment=True)
+    except Exception as e:
+        flash(str(e))
+        return redirect(url_for('vault'))
+
+
+@app.route('/vault/delete/<int:id>', methods=['POST'])
+@login_required
+def delete_vault_item(id):
+    delete_passphrase = get_config_value('DELETE_PASSPHRASE')
+    input_passphrase = request.form.get('passphrase')
+    
+    if input_passphrase != delete_passphrase:
+        flash('Incorrect passphrase.', 'error')
+        return redirect(url_for('vault'))
+    
+    file = Vault.query.get_or_404(id)
+    file_path = os.path.join(VAULT_ITEMS_DIR, file.filename)  # Use VAULT_ITEMS_DIR
+    try:
+        os.remove(file_path)  # Remove the file from the filesystem
+        db.session.delete(file)  # Remove the file reference from the database
+        db.session.commit()
+        flash('File successfully deleted!', 'success')
+    except Exception as e:
+        flash(f'Error deleting file: {str(e)}', 'error')
+        db.session.rollback()
+    
+    return redirect(url_for('vault'))
+
 
 @app.route('/applications')
 @login_required

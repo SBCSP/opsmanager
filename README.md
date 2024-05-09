@@ -2,6 +2,14 @@
 
 OpsManager is a comprehensive application designed for system administrators and DevOps engineers to manage and automate tasks across a network of servers. It integrates Ansible for configuration management and task automation, uses Azure Entra ID for authentication, and relies on a PostgreSQL database. The backend is powered by Flask and uses SQLAlchemy for object-relational mapping. The application also features a secure vault for file uploads and configurations.
 
+# Coming Soon 🎉🎈
+Exciting new features are on the way:
+
+- Deploying and Managing Docker Containers: Simplify your Docker operations with integrated management tools.
+- ClamAV Setup and Monitoring: Enhance security with automated virus scanning setups and monitoring.
+- Porting over Kronosys Code for Server Monitoring: Implement comprehensive server monitoring from Kronosys.
+- Stay tuned for these updates and more enhancements to improve your administrative workflows!
+
 ## Features
 
 - **Ansible Integration**: Automate configurations and management tasks across servers.
@@ -47,4 +55,5 @@ Once you've completed the installation steps. Navigate to the ip:5000 where the 
 - Once you've Saved Configuration - you'll be routed to the app for signin!
 
 ![OpsManager Setup](./app/vault_items/OpsManagerSetup.png)
+
 

@@ -1,27 +1,29 @@
 # Use an official Python runtime as a parent image
-FROM python:3.8-slim-buster
-# FROM python:3.8.18-slim-bookworm
-# FROM ubuntu:latest
-
-# Set environment variables for Flask
-ENV FLASK_APP=app.py
-ENV FLASK_RUN_HOST=0.0.0.0
+FROM python:3.10-slim
 
 # Set the working directory in the container
 WORKDIR /app
 
+# Install system and Ansible dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    ssh \
+    rsync \
+    && apt-get install -y --no-install-recommends openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy the current directory contents into the container at /app
 COPY . /app
 
-# Install any needed packages specified in requirements.txt
-RUN apt-get update && \
-    apt-get install -y python3-dev default-libmysqlclient-dev build-essential pkg-config && \
-    apt-get install -y python3-pip && \
-    pip install --upgrade pip && \
-    pip install -r requirements.txt
+# Install Python packages from requirements.txt + Ansible
+RUN pip install --no-cache-dir -r requirements.txt gunicorn ansible
 
-# Expose port 5000 for the Flask app to listen on
+# Expose port 5000 for the application
 EXPOSE 5000
 
-# Define the command to run your Flask app
-CMD ["python3", "app.py", "--host=0.0.0.0"]
+# Environment variables for Flask
+ENV FLASK_APP=app.py
+
+# Start the gunicorn server
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]

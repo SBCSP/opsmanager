@@ -1,6 +1,6 @@
 # app/app.py
 
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session, stream_with_context, Response, send_file
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, stream_with_context, Response, send_file, flash
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import subprocess, os
@@ -11,12 +11,17 @@ from collections import defaultdict
 import requests, openai
 import json
 import sys
-sys.path.append('/home/configman/repos/opsmanager/app')
+# sys.path.append('/home/configman/repos/opsmanager/app')
 import tempfile
 import subprocess
 from werkzeug.utils import secure_filename
-from flask import flash
 from dotenv import load_dotenv
+
+# Get the directory of the current script
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Add to sys.path the directory where azure_auth.py is located
+sys.path.insert(0, current_dir)
 from azure_auth import login, authorized, logout, login_required
 import msal
 import time
@@ -25,7 +30,6 @@ import logging
 from datetime import datetime
 import os
 import json
-from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 from cryptography.fernet import Fernet
 from sqlalchemy.exc import IntegrityError
@@ -35,6 +39,8 @@ import logging
 
 load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
+
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-very-secret-key' 
@@ -395,24 +401,24 @@ def upgradable_packages():
 # @app.route('/delete_script', methods=['POST'])
 # @login_required
 # def delete_script():
-    delete_passphrase = get_config_value('DELETE_PASSPHRASE')
-    passphrase = request.form.get('passphrase')
+    # delete_passphrase = get_config_value('DELETE_PASSPHRASE')
+    # passphrase = request.form.get('passphrase')
     
-    # Verify the passphrase
-    if passphrase == delete_passphrase:
-        script_name = request.form.get('script_name')
-        script_path = os.path.join('./scripts', secure_filename(script_name))
+    # # Verify the passphrase
+    # if passphrase == delete_passphrase:
+    #     script_name = request.form.get('script_name')
+    #     script_path = os.path.join('./scripts', secure_filename(script_name))
         
-        # Delete the script file if it exists
-        if os.path.exists(script_path):
-            os.remove(script_path)
-            flash('Script deleted successfully.')
-        else:
-            flash('Script not found.')
-    else:
-        flash('Incorrect passphrase.')
+    #     # Delete the script file if it exists
+    #     if os.path.exists(script_path):
+    #         os.remove(script_path)
+    #         flash('Script deleted successfully.')
+    #     else:
+    #         flash('Script not found.')
+    # else:
+    #     flash('Incorrect passphrase.')
     
-    return redirect(url_for('scripts'))
+    # return redirect(url_for('scripts'))
 
 
 @app.route('/playbooks')

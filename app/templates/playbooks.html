@@ -18,6 +18,11 @@
         </form>
     </div>
 
+    <div id="running-info" class="hidden">
+        <h2 id="running-playbook-name" class="text-lg font-bold text-gray-700"></h2>
+        <div id="running-timer" class="text-sm font-semibold text-gray-500"></div>
+    </div>
+
     <table class="min-w-full table-auto">
         <thead class="bg-gray-200">
             <tr>
@@ -71,11 +76,22 @@
 <!-- Add this to the bottom of your scripts.html inside the block content -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.3/socket.io.js"></script>
 <script type="text/javascript">
+    var startTime, interval;
     var socket = io.connect('https://' + document.domain + ':' + location.port);
 
     function executePlaybook(playbookName, sudoRequired) {
         var passphrase = prompt('Please enter the passphrase to execute the playbook:');
         if (passphrase) {
+            // Show playbook name
+            document.getElementById('running-playbook-name').textContent = `Running: ${playbookName}`;
+            document.getElementById('running-info').classList.remove('hidden');
+
+            startTime = Date.now();
+            interval = setInterval(function() {
+                var seconds = Math.floor((Date.now() - startTime) / 1000);
+                document.getElementById('running-timer').textContent = `${seconds} seconds running`;
+            }, 1000);
+
             var sudoPassword = '';
             if (sudoRequired) {
                 sudoPassword = prompt('Please enter the sudo password:');
@@ -92,15 +108,19 @@
         }
     }
 
-    socket.on('redirect', function (data) {
+    socket.on('redirect', function(data) {
+        clearInterval(interval);
         var spinner = document.getElementById('loading-spinner');
         spinner.classList.add('hidden');  // Hide the spinner on redirect
+        document.getElementById('running-info').classList.add('hidden');
         window.location.href = data.url;
     });
 
-    socket.on('playbook_error', function (data) {
+    socket.on('playbook_error', function(data) {
+        clearInterval(interval);
         var spinner = document.getElementById('loading-spinner');
         spinner.classList.add('hidden');  // Hide the spinner on error
+        document.getElementById('running-info').classList.add('hidden');
         alert(data.error);  // Alert the user
     });
 

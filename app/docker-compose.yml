@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: opsmanager_postgres
+    environment:
+      POSTGRES_DB: opsmanager       # Database name
+      POSTGRES_USER: opsmanager     # Database user
+      POSTGRES_PASSWORD: opsmanager # Database password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"                 # Map PostgreSQL port to host
+    networks:
+      - opsmanager_network         # Attach to network
+    restart: unless-stopped
+
+  opsmanager:
+    build: .                        # Use the Dockerfile in the current directory
+    container_name: opsmanager_app
+    ports:
+      - "5000:5000"                 # Map Flask port to host
+    environment:
+      FLASK_APP: app.py
+      FLASK_RUN_HOST: 0.0.0.0
+      DATABASE_URL: postgresql://opsmanager:opsmanager@postgres:5432/opsmanager
+    depends_on:
+      - postgres                    # Ensure postgres service is started first
+    networks:
+      - opsmanager_network          # Attach to network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  opsmanager_network:
+    driver: bridge

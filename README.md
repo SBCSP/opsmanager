@@ -23,7 +23,6 @@ Exciting new features are on the way:
 
 ### Prerequisites
 
-- Docker Engine
 - Python 3.10+
 - PostgreSQL - Compose file database/postgres-compose.yml
 - Ansible
@@ -39,12 +38,11 @@ Exciting new features are on the way:
    cp .env.example .env
    # Edit .env file to include DATABASE_URL=postgresql://opsmanager:opsmanager@localhost:5432/opsmanager
    
-   docker compose -f database/postgres-compose.yml up -d
    flask db init
    flask db migrate -m "Initial setup"
    flask db upgrade
 
-   python app.py
+   ./startup.sh
    
 ```
 

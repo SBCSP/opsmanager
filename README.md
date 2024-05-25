@@ -48,7 +48,7 @@ Exciting new features are on the way:
 
 # Setup
 
-Once you've completed the installation steps. Navigate to the ip:5000 where the app is running and compelete the setup.
+Once you've completed the installation steps. Navigate to the ip:5000 where the app is running and complete the setup.
 - This is where you'll need your Azure App Registration details.
 - Once you've Saved Configuration - you'll be routed to the app for signin!
 

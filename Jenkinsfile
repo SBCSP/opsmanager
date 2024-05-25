@@ -3,7 +3,11 @@ pipeline {
     stages {
         stage('Test') {
             steps {
-                sh 'docker version'
+                withCredentials([sshUserPrivateKey(credentialsId: 'dev-opsmanager', keyFileVariable: 'MY_SSH_KEY')]) {
+                    sh '''
+                    ssh -i $MY_SSH_KEY root@192.168.3.18 "docker ps"
+                    '''
+                }
             }
         }
     }

@@ -16,6 +16,8 @@ import tempfile
 import subprocess
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+import base64
+
 
 # Get the directory of the current script
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -48,9 +50,13 @@ essential_keys = ['SECRET_KEY', 'REDIRECT_FORCE', 'AUTHORITY', 'CLIENT_SECRET', 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 VAULT_ITEMS_DIR = os.path.join(BASE_DIR, 'vault_items')
 
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Max upload size is 16MB
+app.jinja_env.filters['b64encode'] = lambda x: base64.b64encode(x).decode('utf-8')
+
+
 from database import models
 from database.connection import db, init_db
-from database.models import AppConfig, Playbooks, PlaybookResults, ContainerImages, RunningApps, InventoryConfig, HostStatus, Vault
+from database.models import AppConfig, Playbooks, PlaybookResults, ContainerImages, RunningApps, InventoryConfig, HostStatus, Vault, Profile
 init_db(app)
 # app.secret_key = os.getenv('SECRET_KEY')
 csrf = CSRFProtect(app)
@@ -173,11 +179,60 @@ def dashboard():
                            host_ping_results=host_ping_results)
 
 
+
 @app.route('/profile')
 @login_required
 def profile():
-    user_info = session.get('user', {})  # Retrieve user info from session
-    return render_template('profile.html', user=user_info)
+    user_info = session.get('user', {})
+    email = user_info.get('email') or user_info.get('preferred_username')
+    
+    if not email:
+        # Handle the case where email is not found in the session
+        return redirect(url_for('logout'))
+    
+    # Retrieve the profile picture from the database
+    profile = Profile.query.filter_by(email=email).first()
+    profile_pic = profile.profile_pic if profile else None
+
+    return render_template('profile.html', user=user_info, profile_pic=profile_pic)
+
+
+
+@app.route('/upload_profile_pic', methods=['POST'])
+@login_required
+def upload_profile_pic():
+    user_info = session.get('user', {})
+    email = user_info.get('email') or user_info.get('preferred_username')
+    
+    if not email:
+        # Handle the case where email is not found in the session
+        return redirect(url_for('profile'))
+    
+    if 'profile_pic' not in request.files:
+        return redirect(url_for('profile'))
+    
+    file = request.files['profile_pic']
+    
+    if file.filename == '':
+        return redirect(url_for('profile'))
+    
+    # Read the file and encode it as binary data
+    profile_pic = file.read()
+    
+    # Retrieve or create the profile entry
+    profile = Profile.query.filter_by(email=email).first()
+    if not profile:
+        profile = Profile(email=email, profile_pic=profile_pic)
+    else:
+        profile.profile_pic = profile_pic
+    
+    # Save to the database
+    db.session.add(profile)
+    db.session.commit()
+    
+    return redirect(url_for('profile'))
+
+
 
 @app.route('/execute_ping', methods=['POST'])
 def execute_ping():

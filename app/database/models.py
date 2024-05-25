@@ -2,6 +2,7 @@
 
 from .connection import db
 from datetime import datetime
+from sqlalchemy.dialects.postgresql import BYTEA
 
 
 class InventoryConfig(db.Model):
@@ -79,3 +80,12 @@ class Vault(db.Model):
 
     def __repr__(self):
         return f'<Vault {self.filename}>'
+    
+class Profile(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), nullable=False, unique=True)
+    profile_pic = db.Column(BYTEA, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Profile {self.email}>'

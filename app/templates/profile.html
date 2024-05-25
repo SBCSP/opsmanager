@@ -3,31 +3,38 @@
 {% block title %}User Profile{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 py-6">
+<div class="max-w-2xl mx-auto px-4 py-6">
     <div class="bg-white shadow rounded-lg p-6">
         <h1 class="text-2xl font-semibold text-gray-800 mb-4">User Profile</h1>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="mb-4">
+        <div class="flex flex-col md:flex-row items-center md:items-start md:space-x-6">
+            <div class="mb-4 md:mb-0">
                 {% if profile_pic %}
                     <img src="data:image/png;base64,{{ profile_pic | b64encode }}" alt="Profile Picture" class="rounded-full w-32 h-32">
                 {% else %}
-                    <p>No profile picture available.</p>
+                    <p>No Photo.</p>
                 {% endif %}
             </div>
-            <form action="{{ url_for('upload_profile_pic') }}" method="post" enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="mb-4">
-                    <input type="file" name="profile_pic" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none">
-                </div>
-                <div class="mb-4">
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Upload</button>
-                </div>
-            </form>
-            <div class="mb-4">
+            <div class="flex-1">
+                <form action="{{ url_for('upload_profile_pic') }}" method="post" enctype="multipart/form-data" class="space-y-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div>
+                        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Upload</button>
+                    </div>
+                    <div>
+                        <input type="file" name="profile_pic" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <br>
+    <div class="bg-white shadow rounded-lg p-6">
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
                 <label class="block text-gray-700 text-sm font-bold mb-2">Username:</label>
                 <div class="text-lg text-gray-900">{{ user.get('name', 'N/A') }}</div>
             </div>
-            <div class="mb-4">
+            <div>
                 <label class="block text-gray-700 text-sm font-bold mb-2">Email:</label>
                 <div class="text-lg text-gray-900">{{ user.get('preferred_username', 'N/A') }}</div>
             </div>

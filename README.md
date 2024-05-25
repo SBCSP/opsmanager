@@ -44,7 +44,7 @@ Exciting new features are on the way:
 
    ./startup.sh
    
-```
+   ```
 
 # Setup
 

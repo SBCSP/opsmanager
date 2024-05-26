@@ -52,6 +52,6 @@ Once you've completed the installation steps. Navigate to the ip:5000 where the 
 - This is where you'll need your Azure App Registration details.
 - Once you've Saved Configuration - you'll be routed to the app for signin!
 
-![OpsManager Setup](./app/vault_items/OpsManagerSetup.png)
+![OpsManager Setup](./app/static/OpsManagerSetup.png)
 
 

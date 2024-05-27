@@ -56,7 +56,7 @@ app.jinja_env.filters['b64encode'] = lambda x: base64.b64encode(x).decode('utf-8
 
 from database import models
 from database.connection import db, init_db
-from database.models import AppConfig, Playbooks, PlaybookResults, ContainerImages, RunningApps, InventoryConfig, HostStatus, Vault, Profile
+from database.models import AppConfig, Playbooks, PlaybookResults, ContainerImages, RunningApps, InventoryConfig, HostStatus, Vault, Profile, Dockerfiles
 init_db(app)
 # app.secret_key = os.getenv('SECRET_KEY')
 csrf = CSRFProtect(app)
@@ -774,9 +774,99 @@ def delete_vault_item(id):
 @login_required
 def applications():
     # Query all container images from the database
-    container_images = ContainerImages.query.all()
+    dockerfiles = Dockerfiles.query.all()
     # Pass the queried container images to the template
-    return render_template('applications.html', container_images=container_images)
+    return render_template('applications.html', dockerfiles=dockerfiles)
+
+@app.route('/edit_image/<dockerfile_id>', methods=['GET', 'POST'])
+@login_required
+def edit_image(dockerfile_id):
+    # Query the Dockerfile from the database
+    dockerfile = Dockerfiles.query.get_or_404(dockerfile_id)
+
+    if request.method == 'POST':
+        new_image_name = request.form['new_image_name']
+        image_content = request.form['image_content']
+
+        # Ensure the new image name is safe to use
+        new_image_name = secure_filename(new_image_name)
+
+        # Update the Dockerfile's name and content in the database
+        dockerfile.name = new_image_name
+        dockerfile.content = image_content
+
+        try:
+            db.session.commit()
+            flash('Dockerfile updated successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error updating Dockerfile.', 'error')
+            app.logger.error(f'Error updating Dockerfile: {e}')
+
+        return redirect(url_for('applications'))
+
+    # Render the edit page with the current Dockerfile data
+    return render_template('edit_image.html', dockerfile=dockerfile)
+
+@app.route('/create_image', methods=['GET', 'POST'])
+@login_required
+def create_image():
+    if request.method == 'POST':
+        image_name = request.form['image_name']
+        image_content = request.form['image_content']
+
+        # Ensure the image name is safe to use
+        image_name = secure_filename(image_name)
+
+        # Check if a Dockerfile with this name already exists
+        existing_dockerfile = Dockerfiles.query.filter_by(name=image_name).first()
+        if existing_dockerfile is not None:
+            flash('A Dockerfile with this name already exists.', 'error')
+            return redirect(url_for('create_image'))
+
+        # Create a new Dockerfile instance
+        new_dockerfile = Dockerfiles(name=image_name, content=image_content)
+
+        # Add the new Dockerfile to the session and commit to the database
+        db.session.add(new_dockerfile)
+        try:
+            db.session.commit()
+            flash('Dockerfile created successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error creating Dockerfile.', 'error')
+            app.logger.error(f'Error creating Dockerfile: {e}')
+
+        # Redirect to the applications overview page
+        return redirect(url_for('applications'))
+
+    # Render the create Dockerfile page
+    return render_template('create_image.html')
+
+@app.route('/view_dockerfile/<int:dockerfile_id>')
+@login_required
+def view_dockerfile(dockerfile_id):
+    dockerfile = Dockerfiles.query.get_or_404(dockerfile_id)
+    return render_template('view_dockerfile.html', dockerfile=dockerfile)
+
+@app.route('/edit_dockerfile/<int:dockerfile_id>')
+@login_required
+def edit_dockerfile(dockerfile_id):
+    dockerfile = Dockerfiles.query.get_or_404(dockerfile_id)
+    return render_template('edit_dockerfile.html', dockerfile=dockerfile)
+
+@app.route('/delete_dockerfile/<int:dockerfile_id>', methods=['POST'])
+@login_required
+def delete_dockerfile(dockerfile_id):
+    dockerfile = Dockerfiles.query.get_or_404(dockerfile_id)
+    try:
+        db.session.delete(dockerfile)
+        db.session.commit()
+        flash('Dockerfile deleted successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting Dockerfile: {str(e)}', 'danger')
+    return redirect(url_for('applications'))
 
 @app.route('/add_app_image', methods=['GET', 'POST'])
 @login_required

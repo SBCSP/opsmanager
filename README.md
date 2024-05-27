@@ -26,7 +26,7 @@ Exciting new features are on the way:
 - Docker Engine (Docker Compose v2)
 - Python 3.10+ (App was built using Miniconda Environments: https://docs.anaconda.com/free/miniconda/#quick-command-line-install)
 - PostgreSQL - Compose file database/postgres-compose.yml
-- Ansible
+- Ansible (ansible [core 2.16.6])
 - MSAL Python Library for Azure AD integration - Need an App Registered in your Azure Tenant
 - Flask and its extensions (requirements.txt)
 

@@ -39,7 +39,7 @@ Exciting new features are on the way:
 
    # Clone repo
    git clone https://github.com/yourrepository/myapp.git
-   cd opsmanager
+   cd opsmanager/app
 
    # Install dependencies 
    pip install -r requirements.txt

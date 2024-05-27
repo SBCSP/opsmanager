@@ -33,18 +33,27 @@ Exciting new features are on the way:
 ### Installation
 
    ```bash
+   # Setup Miniconda environment
+   conda create -n opsmanager python=3.10
+   conda activate opsmanager
+
+   # Clone repo
    git clone https://github.com/yourrepository/myapp.git
    cd opsmanager
+
+   # Install dependencies 
    pip install -r requirements.txt
    cp .env.example .env
 
    docker compose -f database/postgres-compose.yml up -d
    # Edit .env file to include DATABASE_URL=postgresql://opsmanager:opsmanager@localhost:5432/opsmanager
    
+   # Initialize database
    flask db init
    flask db migrate -m "Initial setup"
    flask db upgrade
 
+   # Start application
    ./startup.sh
    
    ```
@@ -58,3 +67,10 @@ Once you've completed the installation steps. Navigate to the ip:5000 where the 
 ![OpsManager Setup](./app/static/OpsManagerSetup.png)
 
 
+# Troubleshooting
+
+- If you used the ./startup.sh script to start the OpsManager application. 
+- A log file called flask_app.log will be created "/app/flask_app.log"
+- This log is active while the app is running. All logged activities are here.
+
+![FlaskApp Logs](./app/static/flask_app_log.png)

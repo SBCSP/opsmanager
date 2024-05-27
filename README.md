@@ -23,7 +23,8 @@ Exciting new features are on the way:
 
 ### Prerequisites
 
-- Python 3.10+
+- Docker Engine (Docker Compose v2)
+- Python 3.10+ (App was built using Miniconda Environments: https://docs.anaconda.com/free/miniconda/#quick-command-line-install)
 - PostgreSQL - Compose file database/postgres-compose.yml
 - Ansible
 - MSAL Python Library for Azure AD integration - Need an App Registered in your Azure Tenant
@@ -36,6 +37,8 @@ Exciting new features are on the way:
    cd opsmanager
    pip install -r requirements.txt
    cp .env.example .env
+
+   docker compose -f database/postgres-compose.yml up -d
    # Edit .env file to include DATABASE_URL=postgresql://opsmanager:opsmanager@localhost:5432/opsmanager
    
    flask db init

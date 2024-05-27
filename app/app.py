@@ -56,7 +56,7 @@ app.jinja_env.filters['b64encode'] = lambda x: base64.b64encode(x).decode('utf-8
 
 from database import models
 from database.connection import db, init_db
-from database.models import AppConfig, Playbooks, PlaybookResults, ContainerImages, RunningApps, InventoryConfig, HostStatus, Vault, Profile
+from database.models import AppConfig, Playbooks, PlaybookResults, ContainerImages, RunningApps, InventoryConfig, HostStatus, Vault, Profile, Dockerfiles
 init_db(app)
 # app.secret_key = os.getenv('SECRET_KEY')
 csrf = CSRFProtect(app)
@@ -178,7 +178,18 @@ def dashboard():
                            total_vault_size_mb=round(total_vault_size_mb, 2),
                            host_ping_results=host_ping_results)
 
-
+@app.route('/clear_hosts', methods=['POST'])
+@login_required
+def clear_hosts():
+    try:
+        db.session.query(HostStatus).delete()
+        db.session.commit()
+        flash('Host statuses cleared successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error clearing host statuses: {str(e)}', 'danger')
+    
+    return redirect(url_for('dashboard'))
 
 @app.route('/profile')
 @login_required
@@ -763,9 +774,99 @@ def delete_vault_item(id):
 @login_required
 def applications():
     # Query all container images from the database
-    container_images = ContainerImages.query.all()
+    dockerfiles = Dockerfiles.query.all()
     # Pass the queried container images to the template
-    return render_template('applications.html', container_images=container_images)
+    return render_template('applications.html', dockerfiles=dockerfiles)
+
+@app.route('/edit_image/<dockerfile_id>', methods=['GET', 'POST'])
+@login_required
+def edit_image(dockerfile_id):
+    # Query the Dockerfile from the database
+    dockerfile = Dockerfiles.query.get_or_404(dockerfile_id)
+
+    if request.method == 'POST':
+        new_image_name = request.form['new_image_name']
+        image_content = request.form['image_content']
+
+        # Ensure the new image name is safe to use
+        new_image_name = secure_filename(new_image_name)
+
+        # Update the Dockerfile's name and content in the database
+        dockerfile.name = new_image_name
+        dockerfile.content = image_content
+
+        try:
+            db.session.commit()
+            flash('Dockerfile updated successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error updating Dockerfile.', 'error')
+            app.logger.error(f'Error updating Dockerfile: {e}')
+
+        return redirect(url_for('applications'))
+
+    # Render the edit page with the current Dockerfile data
+    return render_template('edit_image.html', dockerfile=dockerfile)
+
+@app.route('/create_image', methods=['GET', 'POST'])
+@login_required
+def create_image():
+    if request.method == 'POST':
+        image_name = request.form['image_name']
+        image_content = request.form['image_content']
+
+        # Ensure the image name is safe to use
+        image_name = secure_filename(image_name)
+
+        # Check if a Dockerfile with this name already exists
+        existing_dockerfile = Dockerfiles.query.filter_by(name=image_name).first()
+        if existing_dockerfile is not None:
+            flash('A Dockerfile with this name already exists.', 'error')
+            return redirect(url_for('create_image'))
+
+        # Create a new Dockerfile instance
+        new_dockerfile = Dockerfiles(name=image_name, content=image_content)
+
+        # Add the new Dockerfile to the session and commit to the database
+        db.session.add(new_dockerfile)
+        try:
+            db.session.commit()
+            flash('Dockerfile created successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error creating Dockerfile.', 'error')
+            app.logger.error(f'Error creating Dockerfile: {e}')
+
+        # Redirect to the applications overview page
+        return redirect(url_for('applications'))
+
+    # Render the create Dockerfile page
+    return render_template('create_image.html')
+
+@app.route('/view_dockerfile/<int:dockerfile_id>')
+@login_required
+def view_dockerfile(dockerfile_id):
+    dockerfile = Dockerfiles.query.get_or_404(dockerfile_id)
+    return render_template('view_dockerfile.html', dockerfile=dockerfile)
+
+@app.route('/edit_dockerfile/<int:dockerfile_id>')
+@login_required
+def edit_dockerfile(dockerfile_id):
+    dockerfile = Dockerfiles.query.get_or_404(dockerfile_id)
+    return render_template('edit_dockerfile.html', dockerfile=dockerfile)
+
+@app.route('/delete_dockerfile/<int:dockerfile_id>', methods=['POST'])
+@login_required
+def delete_dockerfile(dockerfile_id):
+    dockerfile = Dockerfiles.query.get_or_404(dockerfile_id)
+    try:
+        db.session.delete(dockerfile)
+        db.session.commit()
+        flash('Dockerfile deleted successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting Dockerfile: {str(e)}', 'danger')
+    return redirect(url_for('applications'))
 
 @app.route('/add_app_image', methods=['GET', 'POST'])
 @login_required
@@ -861,21 +962,134 @@ def view_running_apps(image_id):
     # Render a template with the running apps and the container image details
     return render_template('view_running_apps.html', running_apps=running_apps, container_image=container_image)
 
+# @app.route('/launch_app/<int:image_id>', methods=['GET', 'POST'])
+# @login_required
+# def launch_app(image_id):
+#     container_image = ContainerImages.query.get_or_404(image_id)
+#     hosts = ['host1', 'host2', 'host3']  # Replace with actual host data
+#     available_ports = [5000, 5001, 5002]  # Replace with logic to find available ports
+
+#     if request.method == 'POST':
+#         selected_host = request.form.get('selected_host')
+#         selected_port = request.form.get('selected_port')
+        
+#         # Build the Docker command using the selected port and the default port (dport)
+#         docker_command = f"docker run -t {container_image.image_name} -p {selected_port}:{container_image.dport} -d"
+
+#     return render_template('launch_app.html', image=container_image, hosts=hosts, available_ports=available_ports)
+
 @app.route('/launch_app/<int:image_id>', methods=['GET', 'POST'])
 @login_required
 def launch_app(image_id):
     container_image = ContainerImages.query.get_or_404(image_id)
-    hosts = ['host1', 'host2', 'host3']  # Replace with actual host data
+    
+    # Fetch the latest inventory configuration from the database
+    inventory_config = InventoryConfig.query.order_by(InventoryConfig.date_updated.desc()).first()
+    if not inventory_config:
+        flash("No inventory configuration found. Please upload inventory data.", "error")
+        return redirect(url_for('upload_inventory'))
+
+    # Parse the inventory content
+    inventory_lines = inventory_config.content.splitlines()
+    
     available_ports = [5000, 5001, 5002]  # Replace with logic to find available ports
 
     if request.method == 'POST':
-        selected_host = request.form.get('selected_host')
+        selected_host_line = request.form.get('selected_host')
         selected_port = request.form.get('selected_port')
         
         # Build the Docker command using the selected port and the default port (dport)
-        docker_command = f"docker run -t {container_image.image_name} -p {selected_port}:{container_image.dport} -d"
+        docker_command = f"docker run -d -t {container_image.image_name} -p {selected_port}:{container_image.dport}"
+        
+        # Create a temporary inventory file for Ansible
+        with tempfile.NamedTemporaryFile('w', delete=False) as tmp_inventory:
+            inventory_content = f"[selected]\n{selected_host_line}"
+            tmp_inventory.write(inventory_content)
+            inventory_file_path = tmp_inventory.name
 
-    return render_template('launch_app.html', image=container_image, hosts=hosts, available_ports=available_ports)
+        # Read and log the inventory content for debugging
+        with open(inventory_file_path, 'r') as file:
+            logged_inventory_content = file.read()
+        app.logger.debug(f"Temporary Inventory file content:\n{logged_inventory_content}")
+
+        # Create a temporary playbook file for Ansible
+        playbook_content = f"""---
+- name: Deploy Docker Container
+  hosts: selected
+  tasks:
+    - name: Check Docker Installation
+      shell: which docker
+      register: docker_installed
+    - name: Check if Docker is running
+      shell: systemctl is-active docker
+      register: docker_running
+      when: docker_installed.stdout != ''
+    - name: Run Docker Container
+      shell: {docker_command}
+      args:
+        executable: /bin/bash
+      register: run_docker
+      when: docker_running.stdout == 'active'
+    - name: Log Docker Containers
+      shell: docker ps
+      register: docker_ps_output
+      when: docker_running.stdout == 'active'
+    - name: Capture Container Logs
+      shell: docker logs $(docker ps -lq)
+      register: container_logs
+      when: docker_running.stdout == 'active'
+    - name: Capture Container Status
+      shell: docker inspect $(docker ps -lq)
+      register: container_status
+      when: docker_running.stdout == 'active'
+    - debug:
+        var: docker_ps_output.stdout_lines
+      when: docker_running.stdout == 'active'
+    - debug:
+        var: container_logs.stdout_lines
+      when: docker_running.stdout == 'active'
+    - debug:
+        var: container_status.stdout
+      when: docker_running.stdout == 'active'
+    - name: Print Docker not installed
+      debug:
+        msg: "Docker is not installed on the target host."
+      when: docker_installed.stdout == ''
+    - name: Print Docker not running
+      debug:
+        msg: "Docker service is not running on the target host."
+      when: docker_running.stdout != 'active'
+"""
+        
+        with tempfile.NamedTemporaryFile('w', delete=False) as tmp_playbook:
+            tmp_playbook.write(playbook_content)
+            playbook_file_path = tmp_playbook.name
+        
+        # Log the playbook content for debugging
+        app.logger.debug(f"Playbook content: {playbook_content}")
+        
+        # Run the Ansible playbook
+        command = ['ansible-playbook', '-i', inventory_file_path, playbook_file_path]
+        process = subprocess.run(command, capture_output=True, text=True)
+        
+        # Clean up temporary files
+        os.unlink(inventory_file_path)
+        os.unlink(playbook_file_path)
+        
+        # Log the output for debugging
+        app.logger.debug(f"Ansible stdout: {process.stdout}")
+        app.logger.debug(f"Ansible stderr: {process.stderr}")
+        
+        if process.returncode == 0:
+            flash('Docker container launched successfully.', 'success')
+            flash(f"Ansible output: {process.stdout}", 'info')
+        else:
+            flash(f'Failed to launch Docker container: {process.stderr}', 'error')
+        
+        return redirect(url_for('applications'))
+
+    return render_template('launch_app.html', image=container_image, hosts=inventory_lines, available_ports=available_ports)
+
 
 
 @app.route('/chatbot', methods=["GET", "POST"])

@@ -22,13 +22,22 @@
     </div>
     <hr>
     <br>
-    <form id="ping-form" action="{{ url_for('execute_ping') }}" method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-            Ping all hosts
-        </button>
-    </form>
-    <hr>
+    <div class="flex justify-between items-start">
+        <form id="ping-form" action="{{ url_for('execute_ping') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Ping all hosts
+            </button>
+        </form>
+        <!-- Add the new form for clearing hosts -->
+        <form id="clear-hosts-form" action="{{ url_for('clear_hosts') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                Clear Hosts
+            </button>
+        </form>
+    </div>
+    
     <br>
     <table class="min-w-full table-auto">
         <thead class="bg-gray-200">

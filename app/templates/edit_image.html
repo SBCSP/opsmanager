@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Dockerfile{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-4">
+    <h1 class="text-2xl font-semibold text-gray-700 mb-4">Edit Dockerfile</h1>
+    <form action="{{ url_for('edit_image', dockerfile_id=dockerfile.id) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-4">
+            <label for="new_image_name" class="block text-gray-700 font-bold mb-2">Image Name:</label>
+            <input type="text" name="new_image_name" id="new_image_name" value="{{ dockerfile.name }}" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+        </div>
+        <div class="mb-4">
+            <label for="image_content" class="block text-gray-700 font-bold mb-2">Dockerfile Content:</label>
+            <textarea name="image_content" id="image_content" rows="10" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">{{ dockerfile.content }}</textarea>
+        </div>
+        <button type="submit" class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded">Update</button>
+    </form>
+</div>
+{% endblock %}

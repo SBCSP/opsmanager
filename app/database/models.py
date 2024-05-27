@@ -89,3 +89,12 @@ class Profile(db.Model):
 
     def __repr__(self):
         return f'<Profile {self.email}>'
+    
+
+class Dockerfiles(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False, unique=True)
+    content = db.Column(db.Text, nullable=False)
+
+    def __repr__(self):
+        return f'<Dockerfile {self.name}>'

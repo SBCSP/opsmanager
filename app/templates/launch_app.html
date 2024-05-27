@@ -10,8 +10,10 @@
         
         <label for="selected_host">Host:</label>
         <select name="selected_host" id="selected_host" required>
-            {% for host in hosts %}
-            <option value="{{ host }}">{{ host }}</option>
+            {% for host_line in hosts %}
+            {% if host_line.strip() and not host_line.startswith("[") %}
+            <option value="{{ host_line }}">{{ host_line }}</option>
+            {% endif %}
             {% endfor %}
         </select>
 

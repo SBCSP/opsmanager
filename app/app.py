@@ -178,7 +178,18 @@ def dashboard():
                            total_vault_size_mb=round(total_vault_size_mb, 2),
                            host_ping_results=host_ping_results)
 
-
+@app.route('/clear_hosts', methods=['POST'])
+@login_required
+def clear_hosts():
+    try:
+        db.session.query(HostStatus).delete()
+        db.session.commit()
+        flash('Host statuses cleared successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error clearing host statuses: {str(e)}', 'danger')
+    
+    return redirect(url_for('dashboard'))
 
 @app.route('/profile')
 @login_required
@@ -861,21 +872,134 @@ def view_running_apps(image_id):
     # Render a template with the running apps and the container image details
     return render_template('view_running_apps.html', running_apps=running_apps, container_image=container_image)
 
+# @app.route('/launch_app/<int:image_id>', methods=['GET', 'POST'])
+# @login_required
+# def launch_app(image_id):
+#     container_image = ContainerImages.query.get_or_404(image_id)
+#     hosts = ['host1', 'host2', 'host3']  # Replace with actual host data
+#     available_ports = [5000, 5001, 5002]  # Replace with logic to find available ports
+
+#     if request.method == 'POST':
+#         selected_host = request.form.get('selected_host')
+#         selected_port = request.form.get('selected_port')
+        
+#         # Build the Docker command using the selected port and the default port (dport)
+#         docker_command = f"docker run -t {container_image.image_name} -p {selected_port}:{container_image.dport} -d"
+
+#     return render_template('launch_app.html', image=container_image, hosts=hosts, available_ports=available_ports)
+
 @app.route('/launch_app/<int:image_id>', methods=['GET', 'POST'])
 @login_required
 def launch_app(image_id):
     container_image = ContainerImages.query.get_or_404(image_id)
-    hosts = ['host1', 'host2', 'host3']  # Replace with actual host data
+    
+    # Fetch the latest inventory configuration from the database
+    inventory_config = InventoryConfig.query.order_by(InventoryConfig.date_updated.desc()).first()
+    if not inventory_config:
+        flash("No inventory configuration found. Please upload inventory data.", "error")
+        return redirect(url_for('upload_inventory'))
+
+    # Parse the inventory content
+    inventory_lines = inventory_config.content.splitlines()
+    
     available_ports = [5000, 5001, 5002]  # Replace with logic to find available ports
 
     if request.method == 'POST':
-        selected_host = request.form.get('selected_host')
+        selected_host_line = request.form.get('selected_host')
         selected_port = request.form.get('selected_port')
         
         # Build the Docker command using the selected port and the default port (dport)
-        docker_command = f"docker run -t {container_image.image_name} -p {selected_port}:{container_image.dport} -d"
+        docker_command = f"docker run -d -t {container_image.image_name} -p {selected_port}:{container_image.dport}"
+        
+        # Create a temporary inventory file for Ansible
+        with tempfile.NamedTemporaryFile('w', delete=False) as tmp_inventory:
+            inventory_content = f"[selected]\n{selected_host_line}"
+            tmp_inventory.write(inventory_content)
+            inventory_file_path = tmp_inventory.name
 
-    return render_template('launch_app.html', image=container_image, hosts=hosts, available_ports=available_ports)
+        # Read and log the inventory content for debugging
+        with open(inventory_file_path, 'r') as file:
+            logged_inventory_content = file.read()
+        app.logger.debug(f"Temporary Inventory file content:\n{logged_inventory_content}")
+
+        # Create a temporary playbook file for Ansible
+        playbook_content = f"""---
+- name: Deploy Docker Container
+  hosts: selected
+  tasks:
+    - name: Check Docker Installation
+      shell: which docker
+      register: docker_installed
+    - name: Check if Docker is running
+      shell: systemctl is-active docker
+      register: docker_running
+      when: docker_installed.stdout != ''
+    - name: Run Docker Container
+      shell: {docker_command}
+      args:
+        executable: /bin/bash
+      register: run_docker
+      when: docker_running.stdout == 'active'
+    - name: Log Docker Containers
+      shell: docker ps
+      register: docker_ps_output
+      when: docker_running.stdout == 'active'
+    - name: Capture Container Logs
+      shell: docker logs $(docker ps -lq)
+      register: container_logs
+      when: docker_running.stdout == 'active'
+    - name: Capture Container Status
+      shell: docker inspect $(docker ps -lq)
+      register: container_status
+      when: docker_running.stdout == 'active'
+    - debug:
+        var: docker_ps_output.stdout_lines
+      when: docker_running.stdout == 'active'
+    - debug:
+        var: container_logs.stdout_lines
+      when: docker_running.stdout == 'active'
+    - debug:
+        var: container_status.stdout
+      when: docker_running.stdout == 'active'
+    - name: Print Docker not installed
+      debug:
+        msg: "Docker is not installed on the target host."
+      when: docker_installed.stdout == ''
+    - name: Print Docker not running
+      debug:
+        msg: "Docker service is not running on the target host."
+      when: docker_running.stdout != 'active'
+"""
+        
+        with tempfile.NamedTemporaryFile('w', delete=False) as tmp_playbook:
+            tmp_playbook.write(playbook_content)
+            playbook_file_path = tmp_playbook.name
+        
+        # Log the playbook content for debugging
+        app.logger.debug(f"Playbook content: {playbook_content}")
+        
+        # Run the Ansible playbook
+        command = ['ansible-playbook', '-i', inventory_file_path, playbook_file_path]
+        process = subprocess.run(command, capture_output=True, text=True)
+        
+        # Clean up temporary files
+        os.unlink(inventory_file_path)
+        os.unlink(playbook_file_path)
+        
+        # Log the output for debugging
+        app.logger.debug(f"Ansible stdout: {process.stdout}")
+        app.logger.debug(f"Ansible stderr: {process.stderr}")
+        
+        if process.returncode == 0:
+            flash('Docker container launched successfully.', 'success')
+            flash(f"Ansible output: {process.stdout}", 'info')
+        else:
+            flash(f'Failed to launch Docker container: {process.stderr}', 'error')
+        
+        return redirect(url_for('applications'))
+
+    return render_template('launch_app.html', image=container_image, hosts=inventory_lines, available_ports=available_ports)
+
 
 
 @app.route('/chatbot', methods=["GET", "POST"])

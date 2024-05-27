@@ -7,7 +7,7 @@ Exciting new features are on the way:
 
 - Deploying and Managing Docker Containers: Simplify your Docker operations with integrated management tools.
 - ClamAV Setup and Monitoring: Enhance security with automated virus scanning setups and monitoring.
-- Porting over Kronosys Code for Server Monitoring: Implement comprehensive server monitoring from Kronosys.
+- Porting over Kronosys Code for Server Monitoring: Implement comprehensive server monitoring from Kronosys. https://github.com/SBCSP/kronosys
 - Stay tuned for these updates and more enhancements to improve your administrative workflows!
 
 ## Features

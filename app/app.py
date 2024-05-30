@@ -17,6 +17,7 @@ import subprocess
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import base64
+from threading import Thread
 
 
 # Get the directory of the current script
@@ -56,7 +57,7 @@ app.jinja_env.filters['b64encode'] = lambda x: base64.b64encode(x).decode('utf-8
 
 from database import models
 from database.connection import db, init_db
-from database.models import AppConfig, Playbooks, PlaybookResults, ContainerImages, RunningApps, InventoryConfig, HostStatus, Vault, Profile, Dockerfiles
+from database.models import AppConfig, Playbooks, PlaybookResults, ContainerImages, RunningApps, InventoryConfig, HostStatus, Vault, Profile, Dockerfiles, HTTPCheck
 init_db(app)
 # app.secret_key = os.getenv('SECRET_KEY')
 csrf = CSRFProtect(app)
@@ -770,13 +771,13 @@ def delete_vault_item(id):
     return redirect(url_for('vault'))
 
 
+# Update the applications route to pass HTTP checks to the template
 @app.route('/applications')
 @login_required
 def applications():
-    # Query all container images from the database
     dockerfiles = Dockerfiles.query.all()
-    # Pass the queried container images to the template
-    return render_template('applications.html', dockerfiles=dockerfiles)
+    http_checks = HTTPCheck.query.all()
+    return render_template('applications.html', dockerfiles=dockerfiles, http_checks=http_checks)
 
 @app.route('/edit_image/<dockerfile_id>', methods=['GET', 'POST'])
 @login_required
@@ -978,6 +979,62 @@ def view_running_apps(image_id):
 
 #     return render_template('launch_app.html', image=container_image, hosts=hosts, available_ports=available_ports)
 
+# Route to add HTTP check
+@app.route('/add_http_check', methods=['POST'])
+def add_http_check():
+    url = request.form.get('url')
+    if url:
+        new_check = HTTPCheck(url=url)
+        db.session.add(new_check)
+        try:
+            db.session.commit()
+            flash('HTTP check added successfully!', 'success')
+        except IntegrityError:
+            db.session.rollback()
+            flash('This URL already exists.', 'error')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error adding HTTP check: {str(e)}', 'error')
+    else:
+        flash('URL cannot be empty.', 'error')
+    return redirect(url_for('applications'))
+
+# Route to delete HTTP check
+@app.route('/delete_http_check/<int:check_id>', methods=['POST'])
+def delete_http_check(check_id):
+    check = HTTPCheck.query.get_or_404(check_id)
+    db.session.delete(check)
+    try:
+        db.session.commit()
+        flash('HTTP check deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting HTTP check: {str(e)}', 'error')
+    return redirect(url_for('applications'))
+
+
+# Function to check the status of a URL
+def check_url_status(http_check):
+    try:
+        response = requests.get(http_check.url)
+        http_check.status = 'Up' if response.status_code == 200 else 'Down'
+    except requests.RequestException:
+        http_check.status = 'Down'
+    db.session.commit()
+
+# Background task to periodically update the status of HTTP checks
+def update_http_checks():
+    while True:
+        with app.app_context():
+            http_checks = HTTPCheck.query.all()
+            for check in http_checks:
+                app.logger.debug(f"Checking status for URL: {check.url}")
+                check_url_status(check)
+            db.session.commit()
+        app.logger.debug("Completed a check cycle, sleeping...")
+        time.sleep(60)  # Reduced interval for testing purposes
+
+
 @app.route('/launch_app/<int:image_id>', methods=['GET', 'POST'])
 @login_required
 def launch_app(image_id):
@@ -1139,5 +1196,10 @@ if __name__ == '__main__':
             app.logger.error(f'Database connection failed: {e}')
 
         app.secret_key = app.secret_key or get_config_value('SECRET_KEY')
+
+    # Start the background thread for checking HTTP statuses
+    thread = Thread(target=update_http_checks)
+    thread.daemon = True
+    thread.start()
 
     socketio.run(app, host='0.0.0.0', debug=True, port=5000, allow_unsafe_werkzeug=True)

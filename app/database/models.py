@@ -98,3 +98,12 @@ class Dockerfiles(db.Model):
 
     def __repr__(self):
         return f'<Dockerfile {self.name}>'
+    
+
+class HTTPCheck(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    url = db.Column(db.String(255), nullable=False, unique=True)
+    status = db.Column(db.String(255), nullable=True)
+
+    def __repr__(self):
+        return f'<HTTPCheck {self.url}>'

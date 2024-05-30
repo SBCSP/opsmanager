@@ -14,6 +14,16 @@ jobs:
         with:
           ref: integration
 
+      - name: Check for differences between integration and main
+        run: |
+          git fetch origin main:main
+          if git diff --quiet HEAD main; then
+            echo "No changes to create a PR for."
+            exit 0
+          else
+            echo "Changes detected, creating PR."
+          fi
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:

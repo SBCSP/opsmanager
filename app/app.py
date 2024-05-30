@@ -979,7 +979,8 @@ def view_running_apps(image_id):
 
 #     return render_template('launch_app.html', image=container_image, hosts=hosts, available_ports=available_ports)
 
-# Route to add HTTP check
+check_interval = 60
+
 @app.route('/add_http_check', methods=['POST'])
 def add_http_check():
     url = request.form.get('url')
@@ -999,7 +1000,6 @@ def add_http_check():
         flash('URL cannot be empty.', 'error')
     return redirect(url_for('applications'))
 
-# Route to delete HTTP check
 @app.route('/delete_http_check/<int:check_id>', methods=['POST'])
 def delete_http_check(check_id):
     check = HTTPCheck.query.get_or_404(check_id)
@@ -1012,8 +1012,6 @@ def delete_http_check(check_id):
         flash(f'Error deleting HTTP check: {str(e)}', 'error')
     return redirect(url_for('applications'))
 
-
-# Function to check the status of a URL
 def check_url_status(http_check):
     try:
         response = requests.get(http_check.url)
@@ -1022,17 +1020,21 @@ def check_url_status(http_check):
         http_check.status = 'Down'
     db.session.commit()
 
-# Background task to periodically update the status of HTTP checks
 def update_http_checks():
     while True:
         with app.app_context():
             http_checks = HTTPCheck.query.all()
             for check in http_checks:
-                app.logger.debug(f"Checking status for URL: {check.url}")
                 check_url_status(check)
             db.session.commit()
-        app.logger.debug("Completed a check cycle, sleeping...")
-        time.sleep(60)  # Reduced interval for testing purposes
+        socketio.emit('update_stopwatch', {'timestamp': time.time()})
+        time.sleep(check_interval)
+
+@socketio.on('connect')
+def handle_connect():
+    emit('update_stopwatch', {'timestamp': time.time()})
+
+
 
 
 @app.route('/launch_app/<int:image_id>', methods=['GET', 'POST'])

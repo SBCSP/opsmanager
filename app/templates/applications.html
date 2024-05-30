@@ -61,7 +61,7 @@
 
         <!-- HTTP Checks table and input field -->
         <div class="w-1/2">
-            <div class="mb-4">
+            <div class="flex justify-between items-center mb-4">
                 <form id="httpCheckForm" action="{{ url_for('add_http_check') }}" method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="text" name="url" id="url" placeholder="Enter HTTP or HTTPS URL" class="w-full px-3 py-2 border rounded">
@@ -69,6 +69,11 @@
                         Add
                     </button>
                 </form>
+                <!-- <div>
+                    <span>Last check: </span>
+                    <span id="stopwatch" class="font-bold text-lg">0</span>
+                    <span>s ago</span>
+                </div> -->
             </div>
             <table class="min-w-full table-auto">
                 <thead class="bg-gray-200">
@@ -105,29 +110,22 @@
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
 <script>
-    function promptDeleteDockerfile(dockerfileId) {
-        var passphrase = prompt("Please enter the passphrase to delete the Dockerfile:");
-        if (passphrase != null && passphrase != "") {
-            var form = document.createElement('form');
-            form.method = 'POST';
-            form.action = "{{ url_for('delete_dockerfile', dockerfile_id=0) }}".replace('/0', '/' + dockerfileId);
+    var socket = io();
 
-            var csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = 'csrf_token';
-            csrfInput.value = '{{ csrf_token() }}';
-            form.appendChild(csrfInput);
+    socket.on('update_stopwatch', function(data) {
+        var lastCheckTime = new Date(data.timestamp * 1000);
+        startStopwatch(lastCheckTime);
+    });
 
-            var passphraseInput = document.createElement('input');
-            passphraseInput.type = 'hidden';
-            passphraseInput.name = 'passphrase';
-            passphraseInput.value = passphrase;
-            form.appendChild(passphraseInput);
-
-            document.body.appendChild(form);
-            form.submit();
-        }
+    function startStopwatch(lastCheckTime) {
+        var stopwatchElement = document.getElementById('stopwatch');
+        setInterval(function () {
+            var currentTime = new Date();
+            var elapsedTime = Math.floor((currentTime - lastCheckTime) / 1000);
+            stopwatchElement.textContent = elapsedTime;
+        }, 1000);
     }
 </script>
 {% endblock %}

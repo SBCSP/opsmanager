@@ -1,3 +1,5 @@
+<!-- templates/applications.html -->
+
 {% extends "base.html" %}
 
 {% block title %}Apps{% endblock %}
@@ -18,42 +20,91 @@
             </button>
         </form>
     </div>
-    
-    <!-- Dockerfiles table -->
-    <table class="min-w-full table-auto">
-        <thead class="bg-gray-200">
-            <tr>
-                <th class="px-4 py-2 text-left">App Name</th>
-                <th class="px-4 py-2 text-left">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for dockerfile in dockerfiles %}
-            <tr class="border-b">
-                <td class="px-4 py-2">{{ dockerfile.name }}</td>
-                <td class="px-4 py-2">
-                    <a href="{{ url_for('view_dockerfile', dockerfile_id=dockerfile.id) }}"
-                        class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded">
-                        View
-                    </a>
-                    <a href="{{ url_for('edit_image', dockerfile_id=dockerfile.id) }}"
-                        class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-3 rounded ml-2">
-                        Edit
-                    </a>
-                    <a href="javascript:void(0);" onclick="promptDeleteDockerfile('{{ dockerfile.id }}')" 
-                        class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded ml-2">
-                        Delete
-                    </a>
-                </td>
-            </tr>
-            {% else %}
-            <tr class="border-b">
-                <td colspan="2" class="px-4 py-2 text-center">No Dockerfiles found.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+
+    <div class="flex space-x-4">
+        <!-- Dockerfiles table -->
+        <div class="w-1/2">
+            <table class="min-w-full table-auto">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="px-4 py-2 text-left">App Name</th>
+                        <th class="px-4 py-2 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dockerfile in dockerfiles %}
+                    <tr class="border-b">
+                        <td class="px-4 py-2">{{ dockerfile.name }}</td>
+                        <td class="px-4 py-2">
+                            <a href="{{ url_for('view_dockerfile', dockerfile_id=dockerfile.id) }}"
+                                class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded">
+                                View
+                            </a>
+                            <a href="{{ url_for('edit_image', dockerfile_id=dockerfile.id) }}"
+                                class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-3 rounded ml-2">
+                                Edit
+                            </a>
+                            <a href="javascript:void(0);" onclick="promptDeleteDockerfile('{{ dockerfile.id }}')" 
+                                class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded ml-2">
+                                Delete
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr class="border-b">
+                        <td colspan="2" class="px-4 py-2 text-center">No Dockerfiles found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- HTTP Checks table and input field -->
+        <div class="w-1/2">
+            <div class="mb-4">
+                <form id="httpCheckForm" action="{{ url_for('add_http_check') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="text" name="url" id="url" placeholder="Enter HTTP or HTTPS URL" class="w-full px-3 py-2 border rounded">
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-2">
+                        Add
+                    </button>
+                </form>
+            </div>
+            <table class="min-w-full table-auto">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="px-4 py-2 text-left">URL</th>
+                        <th class="px-4 py-2 text-left">Status</th>
+                        <th class="px-4 py-2 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for check in http_checks %}
+                    <tr class="border-b">
+                        <td class="px-4 py-2">{{ check.url }}</td>
+                        <td class="px-4 py-2">
+                            <span class="inline-block w-3 h-3 rounded-full {% if check.status == 'Up' %}bg-green-500{% else %}bg-red-500{% endif %}"></span>
+                        </td>
+                        <td class="px-4 py-2">
+                            <form action="{{ url_for('delete_http_check', check_id=check.id) }}" method="POST" style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded ml-2">
+                                    Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr class="border-b">
+                        <td colspan="3" class="px-4 py-2 text-center">No HTTP Checks found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
+
 <script>
     function promptDeleteDockerfile(dockerfileId) {
         var passphrase = prompt("Please enter the passphrase to delete the Dockerfile:");
@@ -61,19 +112,19 @@
             var form = document.createElement('form');
             form.method = 'POST';
             form.action = "{{ url_for('delete_dockerfile', dockerfile_id=0) }}".replace('/0', '/' + dockerfileId);
-    
+
             var csrfInput = document.createElement('input');
             csrfInput.type = 'hidden';
             csrfInput.name = 'csrf_token';
             csrfInput.value = '{{ csrf_token() }}';
             form.appendChild(csrfInput);
-    
+
             var passphraseInput = document.createElement('input');
             passphraseInput.type = 'hidden';
             passphraseInput.name = 'passphrase';
             passphraseInput.value = passphrase;
             form.appendChild(passphraseInput);
-    
+
             document.body.appendChild(form);
             form.submit();
         }

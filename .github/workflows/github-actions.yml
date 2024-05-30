@@ -1,3 +1,26 @@
+name: Create PR from Integration to Main
 
+on:
+  push:
+    branches:
+      - integration
 
-# Actions loaded here
+jobs:
+  productionPromotion:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integration
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: Merge integration into main
+          branch: auto-pr-integration-to-main  # Temporary branch for the PR
+          title: 'Auto PR: Merge integration into main'
+          body: 'This is an automatically generated PR from the integration branch to the main branch.'
+          base: main
+          head: integration

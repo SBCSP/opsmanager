@@ -1,36 +1,20 @@
-name: Create PR from Integration to Main
-
+name: Create production promotion pull request
 on:
   push:
     branches:
       - integration
-
 jobs:
-  productionPromotion:
+  ProdPromotion:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: integration
-
-      - name: Check for differences between integration and main
+          ref: production
+      - name: Reset promotion branch
         run: |
-          git fetch origin main:main
-          if git diff --quiet HEAD main; then
-            echo "No changes to create a PR for."
-            exit 0
-          else
-            echo "Changes detected, creating PR."
-          fi
-
+          git fetch origin integration:integration
+          git reset --hard integration
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: Merge integration into main
-          branch: auto-pr-integration-to-main  # Temporary branch for the PR
-          title: 'Auto PR: Merge integration into main'
-          body: 'This is an automatically generated PR from the integration branch to the main branch.'
-          base: main
-          head: integration
+          branch: main

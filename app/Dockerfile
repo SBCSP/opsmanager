@@ -1,29 +1,48 @@
-# Use an official Python runtime as a parent image
-FROM python:3.10-slim
+FROM ubuntu:22.04
 
-# Set the working directory in the container
+# Set non-interactive frontend
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    software-properties-common \
+    wget \
+    tzdata
+
+# Configure timezone (set your desired timezone)
+RUN ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime && \
+    dpkg-reconfigure --frontend noninteractive tzdata
+
+# Add Ansible repository and install Ansible
+RUN apt-add-repository ppa:ansible/ansible -y && \
+    apt-get update && \
+    apt-get install -y ansible
+
+# Install Miniconda
+RUN mkdir -p /opt/miniconda3 && \
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /opt/miniconda3/miniconda.sh && \
+    bash /opt/miniconda3/miniconda.sh -b -u -p /opt/miniconda3 && \
+    rm -rf /opt/miniconda3/miniconda.sh
+
+# Set the working directory
 WORKDIR /app
-
-# Install system and Ansible dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libpq-dev \
-    ssh \
-    rsync \
-    && apt-get install -y --no-install-recommends openssh-client \
-    && rm -rf /var/lib/apt/lists/*
 
 # Copy the current directory contents into the container at /app
 COPY . /app
 
-# Install Python packages from requirements.txt + Ansible
-RUN pip install --no-cache-dir -r requirements.txt gunicorn ansible
+# Create and activate conda environment, then install requirements
+RUN /opt/miniconda3/bin/conda create -y -n opsmanager python=3.8 && \
+    /opt/miniconda3/bin/conda init bash && \
+    echo "source /opt/miniconda3/bin/activate opsmanager" >> ~/.bashrc && \
+    /bin/bash -c "source /opt/miniconda3/bin/activate opsmanager && pip install --no-cache-dir -r requirements.txt"
 
-# Expose port 5000 for the application
+# Make port 5000 available to the world outside this container
 EXPOSE 5000
 
-# Environment variables for Flask
-ENV FLASK_APP=app.py
+# Define environment variable
+ENV PATH="/opt/miniconda3/envs/opsmanager/bin:/opt/miniconda3/bin:${PATH}"
 
-# Start the gunicorn server
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+# Run the application
+CMD ["bash", "-c", "source /opt/miniconda3/bin/activate opsmanager && python3 app.py"]

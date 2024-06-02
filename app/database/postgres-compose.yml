@@ -13,7 +13,13 @@ services:
     ports:
       - "5432:5432" # Map PostgreSQL port to host
     restart: unless-stopped
+    networks:
+      - opsmanager_network
 
 volumes:
   postgres_data:
     driver: local
+
+networks:
+  opsmanager_network:
+    driver: bridge

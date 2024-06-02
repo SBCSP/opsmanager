@@ -5,31 +5,28 @@ services:
     image: postgres:latest
     container_name: opsmanager_postgres
     environment:
-      POSTGRES_DB: opsmanager       # Database name
-      POSTGRES_USER: opsmanager     # Database user
-      POSTGRES_PASSWORD: opsmanager # Database password
+      POSTGRES_DB: opsmanager       # Replace with your database name
+      POSTGRES_USER: opsmanager         # Replace with your database user
+      POSTGRES_PASSWORD: opsmanager # Replace with your database password
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"                 # Map PostgreSQL port to host
-    networks:
-      - opsmanager_network         # Attach to network
+      - "5432:5432" # Map PostgreSQL port to host
     restart: unless-stopped
+    networks:
+      - opsmanager_network
 
   opsmanager:
-    build: .                        # Use the Dockerfile in the current directory
-    container_name: opsmanager_app
+    image: opsmanager
+    container_name: opsmanager_container
+    env_file:
+      - .env
     ports:
-      - "5000:5000"                 # Map Flask port to host
-    environment:
-      FLASK_APP: app.py
-      FLASK_RUN_HOST: 0.0.0.0
-      DATABASE_URL: postgresql://opsmanager:opsmanager@postgres:5432/opsmanager
-    depends_on:
-      - postgres                    # Ensure postgres service is started first
+      - "5000:5000"
     networks:
-      - opsmanager_network          # Attach to network
-    restart: unless-stopped
+      - opsmanager_network
+    depends_on:
+      - postgres
 
 volumes:
   postgres_data:

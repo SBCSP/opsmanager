@@ -22,7 +22,7 @@ services:
     env_file:
       - .env
     volumes:
-      - /.ssh:/root/.ssh
+      - ${HOME_DIR}/.ssh:/root/.ssh
     ports:
       - "5000:5000"
     networks:

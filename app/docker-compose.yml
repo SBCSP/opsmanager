@@ -22,7 +22,7 @@ services:
     env_file:
       - .env
     volumes:
-      - /home/jlafrance/.ssh:/root/.ssh
+      - /.ssh:/root/.ssh
     ports:
       - "5000:5000"
     networks:

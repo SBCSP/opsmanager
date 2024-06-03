@@ -21,6 +21,8 @@ services:
     container_name: opsmanager_container
     env_file:
       - .env
+    volumes:
+      - /home/jlafrance/.ssh:/root/.ssh
     ports:
       - "5000:5000"
     networks:

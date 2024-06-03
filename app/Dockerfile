@@ -9,7 +9,8 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     software-properties-common \
     wget \
-    tzdata
+    tzdata \
+    openssh-client
 
 # Configure timezone (set your desired timezone)
 RUN ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime && \
@@ -37,6 +38,9 @@ RUN /opt/miniconda3/bin/conda create -y -n opsmanager python=3.8 && \
     /opt/miniconda3/bin/conda init bash && \
     echo "source /opt/miniconda3/bin/activate opsmanager" >> ~/.bashrc && \
     /bin/bash -c "source /opt/miniconda3/bin/activate opsmanager && pip install --no-cache-dir -r requirements.txt"
+
+# Create .ssh directory and set permissions
+RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh
 
 # Make port 5000 available to the world outside this container
 EXPOSE 5000

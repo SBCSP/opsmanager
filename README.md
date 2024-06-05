@@ -59,7 +59,7 @@ Exciting new features are on the way:
    ```
 
 ### Deploy with Docker Compose
-```bash
+   ```bash
    # Clone repo
    git clone https://github.com/yourrepository/myapp.git
    cd opsmanager/app
@@ -74,8 +74,7 @@ Exciting new features are on the way:
    docker exec -it opsmanager_container flask db init
    docker exec -it opsmanager_container flask db migrate
    docker exec -it opsmanager_container flask db upgrade
-
-```
+   ```
 # Setup
 
 Once you've completed the installation steps. Navigate to the ip:5000 where the app is running and complete the setup.

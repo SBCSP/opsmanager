@@ -7,6 +7,7 @@ import subprocess, os
 from flask_wtf import CSRFProtect
 from flask_wtf.csrf import generate_csrf
 import configparser
+from configparser import ConfigParser, DuplicateSectionError
 from collections import defaultdict
 import requests, openai
 import json
@@ -317,6 +318,14 @@ def handle_execute_command(message):
     emit('command_output', {'output': output})
     
 
+def check_for_duplicates(config_string):
+    parser = ConfigParser()
+    try:
+        parser.read_string(config_string)
+    except DuplicateSectionError as e:
+        return str(e)
+    return None
+
 @app.route('/servers')
 @login_required
 def servers():
@@ -327,8 +336,12 @@ def servers():
         return redirect(url_for('upload_inventory'))
 
     # Use configparser to parse content
-    parser = configparser.ConfigParser()
-    parser.read_string(inventory_config.content)
+    parser = ConfigParser()
+    try:
+        parser.read_string(inventory_config.content)
+    except DuplicateSectionError as e:
+        flash('Error: Duplicate section detected. Inventory not changed.', 'error')
+        return redirect(url_for('upload_inventory'))
 
     server_groups = {}
     for section in parser.sections():
@@ -342,9 +355,17 @@ def edit_inventory():
     inventory_config = InventoryConfig.query.order_by(InventoryConfig.id.desc()).first()
     if request.method == 'POST':
         inventory_text = request.form['inventory']
+
+        # Check for duplicate sections
+        error = check_for_duplicates(inventory_text)
+        if error:
+            flash(f'Error: {error}', 'error')
+            return redirect(url_for('edit_inventory'))
+
         new_inventory = InventoryConfig(content=inventory_text)
         db.session.add(new_inventory)
         db.session.commit()
+        flash('Inventory updated successfully.', 'success')
         return redirect(url_for('servers'))
 
     # Pass the current content to the template to be edited
@@ -355,6 +376,13 @@ def edit_inventory():
 def upload_inventory():
     if request.method == 'POST':
         new_content = request.form.get("inventory_data")
+
+        # Check for duplicate sections
+        error = check_for_duplicates(new_content)
+        if error:
+            flash(f'Error: {error}', 'error')
+            return redirect(url_for('upload_inventory'))
+
         existing_config = InventoryConfig.query.order_by(InventoryConfig.date_updated.desc()).first()
         if existing_config:
             existing_config.content = new_content  # Just update the content, date_updated will be set automatically

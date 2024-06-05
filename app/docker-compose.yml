@@ -25,6 +25,7 @@ services:
       - ${HOME_DIR}/.ssh:/root/.ssh
     ports:
       - "5000:5000"
+    restart: unless-stopped
     networks:
       - opsmanager_network
     depends_on:

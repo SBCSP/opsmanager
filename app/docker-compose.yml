@@ -17,7 +17,7 @@ services:
       - opsmanager_network
 
   opsmanager:
-    image: opsmanager
+    image: sandboxcsp/opsmanager
     container_name: opsmanager_container
     env_file:
       - .env

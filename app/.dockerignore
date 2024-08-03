@@ -1,0 +1,26 @@
+# Ignore everything
+*
+
+# Allow the Dockerfile itself
+!Dockerfile
+
+# Allow a specific directory and its contents
+!src/
+
+!database/
+!playbooks/
+!static/
+!templates/
+!vault_items/
+
+# Allow a specific file
+!config/settings.yml
+!requirements.txt
+!config.py
+!backend.py
+!azure_auth.py
+!app.py
+__init__.py
+
+# Allow hidden files (for instance, a .env file)
+!.env

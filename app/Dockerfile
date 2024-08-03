@@ -21,23 +21,14 @@ RUN apt-add-repository ppa:ansible/ansible -y && \
     apt-get update && \
     apt-get install -y ansible
 
-# Install Miniconda
-RUN mkdir -p /opt/miniconda3 && \
-    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /opt/miniconda3/miniconda.sh && \
-    bash /opt/miniconda3/miniconda.sh -b -u -p /opt/miniconda3 && \
-    rm -rf /opt/miniconda3/miniconda.sh
-
 # Set the working directory
 WORKDIR /app
 
 # Copy the current directory contents into the container at /app
 COPY . /app
 
-# Create and activate conda environment, then install requirements
-RUN /opt/miniconda3/bin/conda create -y -n opsmanager python=3.8 && \
-    /opt/miniconda3/bin/conda init bash && \
-    echo "source /opt/miniconda3/bin/activate opsmanager" >> ~/.bashrc && \
-    /bin/bash -c "source /opt/miniconda3/bin/activate opsmanager && pip install --no-cache-dir -r requirements.txt"
+# Install Python dependencies
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Create .ssh directory and set permissions
 RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh
@@ -45,8 +36,5 @@ RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh
 # Make port 5000 available to the world outside this container
 EXPOSE 5000
 
-# Define environment variable
-ENV PATH="/opt/miniconda3/envs/opsmanager/bin:/opt/miniconda3/bin:${PATH}"
-
 # Run the application
-CMD ["bash", "-c", "source /opt/miniconda3/bin/activate opsmanager && python3 app.py"]
+CMD ["python3", "app.py"]

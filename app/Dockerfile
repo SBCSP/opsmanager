@@ -19,7 +19,9 @@ RUN ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime && \
 # Add Ansible repository and install Ansible
 RUN apt-add-repository ppa:ansible/ansible -y && \
     apt-get update && \
-    apt-get install -y ansible
+    apt-get upgrade -y && \
+    apt-get install -y ansible \
+    && apt-get clean
 
 # Set the working directory
 WORKDIR /app

@@ -36,7 +36,9 @@
         <tbody>
             {% for item in items %}
             <tr class="border-b">
-                <td class="px-4 py-2">{{ item.filename }}</td>
+                <td class="px-4 py-2" title="{{ item.filename }}">
+                    {{ item.filename[:25]~'...' if item.filename|length > 25 else item.filename }}
+                </td>
                 <td class="px-4 py-2">{{ (item.file_size / 1024) | round(1) }} KB</td>
                 
                 <!-- New Column for Lock Icon-->

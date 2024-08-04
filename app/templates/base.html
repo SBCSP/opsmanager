@@ -1,177 +1,194 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block title %}{% endblock %}</title>
+        <!-- Include Tailwind CSS from CDN for simplicity -->
+        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+        <!-- FA Icons CDN -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+        <!-- Or you can use your local Tailwind CSS file if you've set up Tailwind with your build process -->
+        <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+        {% block head %}{% endblock %}
+        <style>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{% endblock %}</title>
-    <!-- Include Tailwind CSS from CDN for simplicity -->
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <!-- Or you can use your local Tailwind CSS file if you've set up Tailwind with your build process -->
-    <!-- <link href="{{ url_for('static', filename='css/tailwind.css') }}" rel="stylesheet"> -->
-    {% block head %}{% endblock %}
-</head>
+        </style>
+    </head>
 
-<body class="bg-gray-100">
-    <div id="loading-spinner" class="hidden fixed inset-0 z-50 flex items-center justify-center">
-        <div class="animate-spin rounded-full h-32 w-32 border-t-4 border-b-4 border-blue-500"></div>
-    </div>
+    <body class="bg-gray-100 dark:bg-gray-800 dark:text-white">
+        <div id="loading-spinner" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+            <div class="animate-spin rounded-full h-32 w-32 border-t-4 border-b-4 border-blue-500"></div>
+        </div>
 
-    <!-- Navigation -->
-    <nav class="bg-white shadow-lg">
-        <div class="max-w-6xl mx-auto px-4">
-            <div class="flex justify-between">
-                <div class="flex space-x-7">
-                    <div>
-                        <!-- Website Logo -->
-                        <a href="{{ url_for('dashboard') }}" class="flex items-center py-4 px-2">
-                            <span class="font-semibold text-gray-500 text-lg">OpsManager</span>
-                        </a>
+        <!-- Navigation -->
+        <nav class="bg-white dark:bg-gray-900 shadow-lg">
+            <div class="max-w-6xl mx-auto px-4">
+                <div class="flex justify-between">
+                    <div class="flex space-x-7">
+                        <div>
+                            <!-- Website Logo -->
+                            <a href="{{ url_for('dashboard') }}" class="flex items-center py-4 px-2">
+                                <span class="font-semibold te darkmode-btn-bg-gray-500 dark:text-gray-200 text-lg">OpsManager</span>
+                            </a>
+                        </div>
+                        <!-- Primary Navbar items -->
+                        <div class="relative nav-item" id="hamburger-icon-area">
+                            <div class="flex items-center space-x-3 cursor-pointer">
+                                <a href="#" class="flex items-center space-x-2 text-gray-500 dark:text-gray-200 hover:text-green-500 transition duration-300">
+                                    <i class="fas fa-bars fa-lg"></i>
+                                </a>
+                            </div>
+                            <!-- Dropdown Menu positioned more precisely below the icon -->
+                            <div class="absolute left-0 top-full mt-0 py-2 w-48 bg-white dark:bg-gray-900 dark:text-gray-200 rounded-md shadow-xl hidden"
+                                id="hamburger-dropdown">
+                                <a href="{{ url_for('servers') }}"
+                                    class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-green-500 hover:text-white">Servers</a>
+                                <a href="{{ url_for('playbooks') }}"
+                                    class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-green-500 hover:text-white">Playbooks</a>
+                                <a href="{{ url_for('vault') }}"
+                                    class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-green-500 hover:text-white">Vault</a>
+                                <a href="{{ url_for('applications') }}"
+                                    class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-green-500 hover:text-white">Apps</a>
+                            </div>
+                        </div>
                     </div>
-                    <!-- Primary Navbar items -->
-                    <div class="relative nav-item" id="hamburger-icon-area">
+                    <!-- Profile Icon and Dropdown -->
+                    <div class="relative nav-item" id="profile-icon-area">
                         <div class="flex items-center space-x-3 cursor-pointer">
-                            <a href="#" class="flex items-center space-x-2 text-gray-500 hover:text-green-500 transition duration-300">
-                                <i class="fas fa-bars fa-lg"></i>
+                            <!-- Directly linking to the profile page -->
+                            <a href="{{ url_for('profile') }}"
+                                class="flex items-center space-x-2 text-gray-500 dark:text-gray-200 hover:text-green-500 transition duration-300">
+                                <i class="fas fa-user-circle fa-2x"></i>
                             </a>
                         </div>
                         <!-- Dropdown Menu positioned more precisely below the icon -->
-                        <div class="absolute left-0 top-full mt-0 py-2 w-48 bg-white rounded-md shadow-xl hidden"
-                            id="hamburger-dropdown">
-                            <a href="{{ url_for('servers') }}"
-                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-green-500 hover:text-white">Servers</a>
-                            <a href="{{ url_for('playbooks') }}"
-                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-green-500 hover:text-white">Playbooks</a>
-                            <a href="{{ url_for('vault') }}"
-                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-green-500 hover:text-white">Vault</a>
-                            <a href="{{ url_for('applications') }}"
-                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-green-500 hover:text-white">Apps</a>
+                        <div class="absolute right-0 top-full mt-0 py-2 w-48 bg-white dark:bg-gray-900 dark:text-gray-200 rounded-md shadow-xl hidden"
+                            id="profile-dropdown">
+                            <a href="{{ url_for('logout_route') }}"
+                                class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-green-500 hover:text-white">Logout</a>
+                            <a href="{{ url_for('global_config') }}"
+                                class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-green-500 hover:text-white">Admin</a>
                         </div>
                     </div>
-                </div>
-                <!-- Profile Icon and Dropdown -->
-                <div class="relative nav-item" id="profile-icon-area">
-                    <div class="flex items-center space-x-3 cursor-pointer">
-                        <!-- Directly linking to the profile page -->
-                        <a href="{{ url_for('profile') }}"
-                            class="flex items-center space-x-2 text-gray-500 hover:text-green-500 transition duration-300">
-                            <i class="fas fa-user-circle fa-2x"></i>
-                        </a>
-                    </div>
-                    <!-- Dropdown Menu positioned more precisely below the icon -->
-                    <div class="absolute right-0 top-full mt-0 py-2 w-48 bg-white rounded-md shadow-xl hidden"
-                        id="profile-dropdown">
-                        <a href="{{ url_for('logout_route') }}"
-                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-green-500 hover:text-white">Logout</a>
-                        <a href="{{ url_for('global_config') }}"
-                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-green-500 hover:text-white">Admin</a>
-                    </div>
+
+                    <!-- Dark Mode Toggle -->
+                    <!-- <div class="flex items-center">
+                        <label class="dark-mode-switch">
+                            <input type="checkbox" id="dark-mode-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div> -->
+                    
                 </div>
             </div>
+        </nav>
+
+        <div class="max-w-6xl mx-auto px-4 py-4">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}" role="alert">
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
         </div>
-    </nav>
 
-    <div class="max-w-6xl mx-auto px-4 py-4">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ category }}" role="alert">
-            {{ message }}
+        <style>
+            .alert {
+                padding: 10px;
+                margin-bottom: 15px;
+                border: 1px solid transparent;
+                border-radius: 4px;
+            }
+
+            .alert-error {
+                color: #721c24;
+                background-color: #f8d7da;
+                border-color: #f5c6cb;
+            }
+
+            .alert-success {
+                color: #155724;
+                background-color: #d4edda;
+                border-color: #c3e6cb;
+            }
+
+            .alert-info {
+                color: #0c4a6e;
+                background-color: #bee3f8;
+                border-color: #7fdbff;
+            }
+
+            .nav-item {
+                display: flex;
+                align-items: center;
+            }
+        </style>
+
+        <!-- Content -->
+        <div class="py-6">
+            {% block content %}
+            {% endblock %}
         </div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
-    </div>
 
-    <style>
-        .alert {
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 1px solid transparent;
-            border-radius: 4px;
-        }
+        <!-- Footer -->
+        <footer class="bg-white dark:bg-gray-900 shadow-lg">
+            <div class="max-w-6xl mx-auto px-4 py-6">
+                <div class="text-center text-gray-500 dark:text-gray-200">© 2023 OpsManager</div>
+            </div>
+        </footer>
 
-        .alert-error {
-            color: #721c24;
-            /* Darker red text color for better contrast */
-            background-color: #f8d7da;
-            /* Light red background */
-            border-color: #f5c6cb;
-            /* Slightly darker red border */
-        }
+        <!-- Optional JavaScript -->
+        {% block scripts %}
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                const hamburgerIconArea = document.getElementById('hamburger-icon-area');
+                const hamburgerDropdown = document.getElementById('hamburger-dropdown');
+                const profileIconArea = document.getElementById('profile-icon-area');
+                const profileDropdown = document.getElementById('profile-dropdown');
 
-        .alert-success {
-            color: #155724;
-            /* Dark green text color */
-            background-color: #d4edda;
-            /* Light green background */
-            border-color: #c3e6cb;
-            /* Slightly darker green border */
-        }
+                function showDropdown(menu) {
+                    menu.classList.remove('hidden');
+                }
 
-        .alert-info {
-            color: #0c4a6e;
-            /* Darker blue text color */
-            background-color: #bee3f8;
-            /* Light blue background */
-            border-color: #7fdbff;
-            /* Slightly darker blue border */
-        }
+                function hideDropdown(menu) {
+                    menu.classList.add('hidden');
+                }
 
-        .nav-item {
-            display: flex;
-            align-items: center;
-            /* This will vertically center align items in your nav */
-        }
-    </style>
+                hamburgerIconArea.addEventListener('mouseenter', () => showDropdown(hamburgerDropdown));
+                hamburgerIconArea.addEventListener('mouseleave', () => hideDropdown(hamburgerDropdown));
+                profileIconArea.addEventListener('mouseenter', () => showDropdown(profileDropdown));
+                profileIconArea.addEventListener('mouseleave', () => hideDropdown(profileDropdown));
 
-    <!-- Content -->
-    <div class="py-6">
-        {% block content %}
-        <!-- Content goes here -->
+                hamburgerDropdown.addEventListener('mouseenter', () => showDropdown(hamburgerDropdown));
+                hamburgerDropdown.addEventListener('mouseleave', () => hideDropdown(hamburgerDropdown));
+                profileDropdown.addEventListener('mouseenter', () => showDropdown(profileDropdown));
+                profileDropdown.addEventListener('mouseleave', () => hideDropdown(profileDropdown));
+
+                const darkModeToggle = document.getElementById('dark-mode-toggle');
+                const savedTheme = localStorage.getItem('theme');
+
+                if (savedTheme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    darkModeToggle.checked = true;
+                } else {
+                    darkModeToggle.checked = false;
+                }
+
+                darkModeToggle.addEventListener('change', () => {
+                    if (darkModeToggle.checked) {
+                        document.documentElement.classList.add('dark');
+                        localStorage.setItem('theme', 'dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                        localStorage.setItem('theme', 'light');
+                    }
+                });
+            });
+        </script>
         {% endblock %}
-    </div>
-
-    <!-- Footer -->
-    <footer class="bg-white shadow-lg">
-        <div class="max-w-6xl mx-auto px-4 py-6">
-            <div class="text-center text-gray-500">© 2023 OpsManager</div>
-        </div>
-    </footer>
-
-    <!-- Optional JavaScript -->
-    <!-- Your custom JavaScript here -->
-    {% block scripts %}
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const hamburgerIconArea = document.getElementById('hamburger-icon-area');
-            const hamburgerDropdown = document.getElementById('hamburger-dropdown');
-            const profileIconArea = document.getElementById('profile-icon-area');
-            const profileDropdown = document.getElementById('profile-dropdown');
-
-            // Extend hover effects to both the icon area and the dropdown
-            function showDropdown(menu) {
-                menu.classList.remove('hidden');
-            }
-
-            function hideDropdown(menu) {
-                menu.classList.add('hidden');
-            }
-
-            hamburgerIconArea.addEventListener('mouseenter', () => showDropdown(hamburgerDropdown));
-            hamburgerIconArea.addEventListener('mouseleave', () => hideDropdown(hamburgerDropdown));
-            profileIconArea.addEventListener('mouseenter', () => showDropdown(profileDropdown));
-            profileIconArea.addEventListener('mouseleave', () => hideDropdown(profileDropdown));
-
-            // Prevent the dropdown from disappearing when the mouse is over it
-            hamburgerDropdown.addEventListener('mouseenter', () => showDropdown(hamburgerDropdown));
-            hamburgerDropdown.addEventListener('mouseleave', () => hideDropdown(hamburgerDropdown));
-            profileDropdown.addEventListener('mouseenter', () => showDropdown(profileDropdown));
-            profileDropdown.addEventListener('mouseleave', () => hideDropdown(profileDropdown));
-        });
-    </script>
-    {% endblock %}
-</body>
-
+    </body>
 </html>

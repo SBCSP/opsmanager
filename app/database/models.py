@@ -37,6 +37,7 @@ class Playbooks(db.Model):
     content = db.Column(db.Text, nullable=False)
     sudo_required = db.Column(db.Boolean, default=False, nullable=False)
     results = db.relationship('PlaybookResults', backref='playbook', lazy='dynamic')
+    author = db.Column(db.String(255), nullable=False)
 
     def __repr__(self):
         return f'<Playbook {self.name}>'

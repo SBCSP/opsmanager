@@ -627,6 +627,14 @@ def create_playbook():
         playbook_name = request.form['playbook_name']
         playbook_content = request.form['playbook_content']
         sudo_required = 'sudo_required' in request.form  # This will be True if the checkbox is checked
+        
+        # Capture the username of the creator
+        user_info = session.get('user', {})
+        username = user_info.get('username') or user_info.get('preferred_username')
+        
+        if not username:
+            flash('User information not found. Please log in again.', 'error')
+            return redirect(url_for('logout'))
 
         # Ensure the playbook name is safe to use
         playbook_name = secure_filename(playbook_name)
@@ -637,8 +645,8 @@ def create_playbook():
             flash('A playbook with this name already exists.', 'error')
             return redirect(url_for('create_playbook'))
 
-        # Create a new Playbook instance with the sudo_required field
-        new_playbook = Playbooks(name=playbook_name, content=playbook_content, sudo_required=sudo_required)
+        # Create a new Playbook instance with the sudo_required field and author
+        new_playbook = Playbooks(name=playbook_name, content=playbook_content, sudo_required=sudo_required, author=username)
 
         # Add the new playbook to the session and commit to the database
         db.session.add(new_playbook)

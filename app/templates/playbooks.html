@@ -29,6 +29,7 @@
                 <th class="px-4 py-2 text-left">Playbook Name</th>
                 <th class="px-4 py-2 text-left">Sudo</th>
                 <th class="px-4 py-2 text-left">Actions</th>
+                <th class="px-4 py-2 text-left">Author</th>
                 <th class="px-4 py-2 text-left">Results</th>
             </tr>
         </thead>
@@ -55,6 +56,7 @@
                         Delete
                     </button>
                 </td>
+                <td class="px-4 py-2">{{ playbook.author }}</td> <!-- Author column -->
                 <td class="px-4 py-2">
                     {% if playbook.results.count() > 0 %}
                         <a href="{{ url_for('view_playbook_results', playbook_id=playbook.id) }}"

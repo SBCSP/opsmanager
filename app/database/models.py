@@ -77,6 +77,7 @@ class Vault(db.Model):
     filename = db.Column(db.String(255), nullable=False, unique=True)
     file_size = db.Column(db.Integer, nullable=False)  # size in bytes
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    password = db.Column(db.String(255), nullable=True)  # Optional password field
 
     def __repr__(self):
         return f'<Vault {self.filename}>'

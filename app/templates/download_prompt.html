@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Download File{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4">
+    <h3 class="text-2xl font-semibold text-gray-700">Enter Password to Download File: {{ filename }}</h3>
+    <form action="{{ url_for('download_file', id=file_id) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-4">
+            <label for="password" class="block text-gray-700">Password:</label>
+            <input type="password" id="password" name="password" class="w-full px-3 py-2 border rounded" required>
+        </div>
+        <div class="flex justify-between">
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Submit</button>
+            <a href="{{ url_for('vault') }}" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Back</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

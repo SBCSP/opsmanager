@@ -24,6 +24,7 @@ services:
     volumes:
       - ${HOME_DIR}/.ssh:/root/.ssh
       - vault_items:/app/vault_items
+      - migrations:/app/migrations
     ports:
       - "5000:5000"
     restart: unless-stopped
@@ -36,6 +37,8 @@ volumes:
   postgres_data:
     driver: local
   vault_items:
+    driver: local
+  migrations:
     driver: local
 
 networks:

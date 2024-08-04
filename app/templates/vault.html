@@ -13,7 +13,11 @@
         <!-- File Upload Form -->
         <form id="upload-form" action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="flex items-center">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="file" name="file" class="mr-2 bg-white">
+            <input type="file" name="file" class="mr-2 bg-white" required>
+            <label for="password-checkbox" class="mr-2">
+                <input type="checkbox" id="password-checkbox" name="password_required"> Require Password?
+            </label>
+            <input type="password" id="password-field" name="password" class="mr-2 bg-white hidden">
             <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Upload File</button>
         </form>
     </div>
@@ -24,6 +28,7 @@
             <tr>
                 <th class="px-4 py-2 text-left">Name</th>
                 <th class="px-4 py-2 text-left">Size (KB)</th>
+                <th class="px-4 py-2 text-left"></th>
                 <th class="px-4 py-2 text-left">Date Created</th>
                 <th class="px-4 py-2 text-left">Actions</th>
             </tr>
@@ -33,6 +38,15 @@
             <tr class="border-b">
                 <td class="px-4 py-2">{{ item.filename }}</td>
                 <td class="px-4 py-2">{{ (item.file_size / 1024) | round(1) }} KB</td>
+                
+                <!-- New Column for Lock Icon-->
+                <td class="px-4 py-2 text-center">
+                    {% if item.password %}
+                    <!-- Display Lock Icon if password is set -->
+                    <img src="{{ url_for('static', filename='lock-icon.png') }}" alt="Locked" class="h-6 w-6 inline-block">
+                    {% endif %}
+                </td>
+                
                 <td class="px-4 py-2">{{ item.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                 <td class="px-4 py-2">
                     <div style="display: flex; justify-content: start; align-items: center; gap: 10px;">
@@ -42,7 +56,11 @@
                             Delete
                         </button>
                         <!-- Download Button -->
+                        {% if item.password %}
+                        <a href="{{ url_for('download_prompt', id=item.id) }}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded">Download</a>
+                        {% else %}
                         <a href="{{ url_for('download_file', id=item.id) }}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded">Download</a>
+                        {% endif %}
                     </div>
                 </td>
             </tr>
@@ -51,53 +69,62 @@
     </table>
 </div>
 
-
 {% block scripts %}
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const uploadForm = document.getElementById('upload-form');
-        const spinner = document.getElementById('loading-spinner');
-    
-        // Show spinner when a file is being uploaded
-        uploadForm.addEventListener('submit', function() {
-            if (uploadForm['file'].files.length > 0) {
-                spinner.classList.remove('hidden');  // Show spinner
+document.addEventListener("DOMContentLoaded", function() {
+    const passwordCheckbox = document.getElementById('password-checkbox');
+    const passwordField = document.getElementById('password-field');
+
+    passwordCheckbox.addEventListener('change', function() {
+        if (passwordCheckbox.checked) {
+            passwordField.classList.remove('hidden');
+            passwordField.required = true;
+        } else {
+            passwordField.classList.add('hidden');
+            passwordField.required = false;
+        }
+    });
+
+    const uploadForm = document.getElementById('upload-form');
+    const spinner = document.getElementById('loading-spinner');
+
+    uploadForm.addEventListener('submit', function() {
+        if (uploadForm['file'].files.length > 0) {
+            spinner.classList.remove('hidden');  // Show spinner
+        }
+    });
+
+    const deleteButtons = document.querySelectorAll('.delete-btn');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();  // Stop the button from submitting traditionally
+            const deleteUrl = this.getAttribute('data-url');  // Get the URL from the data attribute
+            const passphrase = prompt('Please enter passphrase to confirm deletion:');
+            
+            if (passphrase) {
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = deleteUrl;  // Set the action to the URL from data attribute
+
+                // CSRF token field
+                var csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrf_token';
+                csrfInput.value = '{{ csrf_token() }}';
+                form.appendChild(csrfInput);
+
+                var passphraseInput = document.createElement('input');
+                passphraseInput.type = 'hidden';
+                passphraseInput.name = 'passphrase';
+                passphraseInput.value = passphrase;
+                form.appendChild(passphraseInput);
+
+                document.body.appendChild(form);
+                form.submit();
             }
         });
-    
-        // Handle delete button clicks
-        const deleteButtons = document.querySelectorAll('.delete-btn');
-        deleteButtons.forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();  // Stop the button from submitting traditionally
-                const deleteUrl = this.getAttribute('data-url');  // Get the URL from the data attribute
-                const passphrase = prompt('Please enter passphrase to confirm deletion:');
-                
-                if (passphrase) {
-                    var form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = deleteUrl;  // Set the action to the URL from data attribute
-    
-                    // CSRF token field
-                    var csrfInput = document.createElement('input');
-                    csrfInput.type = 'hidden';
-                    csrfInput.name = 'csrf_token';
-                    csrfInput.value = '{{ csrf_token() }}';
-                    form.appendChild(csrfInput);
-    
-                    var passphraseInput = document.createElement('input');
-                    passphraseInput.type = 'hidden';
-                    passphraseInput.name = 'passphrase';
-                    passphraseInput.value = passphrase;
-                    form.appendChild(passphraseInput);
-    
-                    document.body.appendChild(form);
-                    form.submit();
-                }
-            });
-        });
     });
+});
 </script>
-    
 {% endblock %}
 {% endblock %}

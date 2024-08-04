@@ -52,7 +52,7 @@ essential_keys = ['SECRET_KEY', 'REDIRECT_FORCE', 'AUTHORITY', 'CLIENT_SECRET', 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 VAULT_ITEMS_DIR = os.path.join(BASE_DIR, 'vault_items')
 
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Max upload size is 16MB
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024 * 1024 # Max upload size is 16MB
 app.jinja_env.filters['b64encode'] = lambda x: base64.b64encode(x).decode('utf-8')
 
 
@@ -736,6 +736,10 @@ def vault():
 @login_required
 def upload_file():
     file = request.files['file']
+    password_required = request.form.get('password_required') == 'on'
+    password = request.form.get('password')
+
+    # Check if a file is selected
     if file:
         filename = secure_filename(file.filename)
         file_path = os.path.join(VAULT_ITEMS_DIR, filename)
@@ -745,7 +749,7 @@ def upload_file():
             file_size = os.path.getsize(file_path)
 
             try:
-                new_file = Vault(filename=filename, file_size=file_size)
+                new_file = Vault(filename=filename, file_size=file_size, password=password if password_required else None)
                 db.session.add(new_file)
                 db.session.commit()
                 flash('File successfully uploaded!', 'success')
@@ -760,20 +764,32 @@ def upload_file():
     return redirect(url_for('vault'))
 
 
-@app.route('/vault/download/<int:id>')
+@app.route('/vault/download/<int:id>', methods=['POST', 'GET'])
 @login_required
 def download_file(id):
     file = Vault.query.get_or_404(id)
     file_path = os.path.join(VAULT_ITEMS_DIR, file.filename)
+    
+    input_password = request.form.get('password', '')
+    if file.password and input_password != file.password:
+        flash('Incorrect password.', 'error')
+        return redirect(url_for('download_prompt', id=id))
+    
     if not os.path.exists(file_path):
         flash('File not found.', 'error')
         return redirect(url_for('vault'))
+    
     try:
         return send_file(file_path, as_attachment=True)
     except Exception as e:
         flash(str(e))
         return redirect(url_for('vault'))
 
+@app.route('/vault/download_prompt/<int:id>')
+@login_required
+def download_prompt(id):
+    file = Vault.query.get_or_404(id)
+    return render_template('download_prompt.html', file_id=id, filename=file.filename)
 
 @app.route('/vault/delete/<int:id>', methods=['POST'])
 @login_required

@@ -23,6 +23,26 @@
         <div id="running-timer" class="text-sm font-semibold text-red-500"></div>
     </div>
 
+    <div class="mb-4">
+        <form method="GET" action="{{ url_for('playbooks') }}" class="flex items-center">
+            <input 
+                type="text" 
+                name="search" 
+                placeholder="Search playbooks..." 
+                value="{{ request.args.get('search', '') }}" 
+                class="py-2 px-4 border border-gray-300 rounded-lg mr-2">
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Search
+            </button>
+            <button 
+                type="button" 
+                class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                onclick="window.location.href='{{ url_for('playbooks') }}'">
+                Clear
+            </button>
+        </form>
+    </div>
+
     <table class="min-w-full table-auto">
         <thead class="bg-gray-200">
             <tr>
@@ -36,7 +56,7 @@
         <tbody>
             {% for playbook in playbooks %}
             <tr class="border-b">
-                <td class="px-4 py-2">{{ playbook.name }}</td>
+                <td class="px-4 py-2">{{ playbook.name | truncate(18) }}</td>
                 <td class="px-4 py-2">
                     {% if playbook.sudo_required %}
                         <span class="text-green-500">&#x2714;</span> <!-- Green checkmark -->
@@ -56,7 +76,7 @@
                         Delete
                     </button>
                 </td>
-                <td class="px-4 py-2">{{ playbook.author }}</td> <!-- Author column -->
+                <td class="px-4 py-2">{{ playbook.author | truncate(15) }}</td> <!-- Author column -->
                 <td class="px-4 py-2">
                     {% if playbook.results.count() > 0 %}
                         <a href="{{ url_for('view_playbook_results', playbook_id=playbook.id) }}"

@@ -516,11 +516,25 @@ def upgradable_packages():
     # return redirect(url_for('scripts'))
 
 
+# @app.route('/playbooks')
+# @login_required
+# def playbooks():
+#     # Query all playbooks from the database
+#     all_playbooks = Playbooks.query.all()
+
+#     # Pass the queried playbooks to the template
+#     return render_template('playbooks.html', playbooks=all_playbooks)
+
 @app.route('/playbooks')
 @login_required
 def playbooks():
-    # Query all playbooks from the database
-    all_playbooks = Playbooks.query.all()
+    search_query = request.args.get('search', '')  # Get the search query from the request
+    if search_query:
+        # Filter the playbooks based on the search query
+        all_playbooks = Playbooks.query.filter(Playbooks.name.ilike(f'%{search_query}%')).all()
+    else:
+        # Query all playbooks if there's no search query
+        all_playbooks = Playbooks.query.all()
 
     # Pass the queried playbooks to the template
     return render_template('playbooks.html', playbooks=all_playbooks)
@@ -578,7 +592,8 @@ def handle_execute_playbook(message):
     db.session.add(new_playbook_result)
     try:
         db.session.commit()
-        emit('redirect', {'url': url_for('show_playbook_result', success=True)})
+        # emit('redirect', {'url': url_for('show_playbook_result', success=True)})
+        emit('redirect', {'url': url_for('show_playbook_result', success=True, playbook_name=playbook_name)})
     except Exception as e:
         db.session.rollback()
         emit('playbook_error', {'error': 'Failed to save playbook results.'})
@@ -595,13 +610,17 @@ def show_playbook_result():
     playbook_output = session.pop('playbook_output', 'No output captured.')
     playbook_return_code = session.pop('playbook_return_code', None)
     success = request.args.get('success', 'True') == 'True'
+    playbook_name = request.args.get('playbook_name', 'Unknown')
 
     # Flash a message based on the success parameter
+    # if success:
+    #     flash('Playbook executed successfully.', 'info')
+    # else:
+    #     flash('Playbook execution failed with errors. View Results for corrective actions!', 'error')
     if success:
-        flash('Playbook executed successfully.', 'success')
+        flash(f'Playbook executed successfully: {playbook_name}', 'success')
     else:
-        flash('Playbook execution failed with errors. View Results for corrective actions!', 'error')
-
+        flash(f'Playbook execution failed with errors: {playbook_name} View Results for corrective actions!', 'error')
     # Optionally, you can store the output in a file or handle it as needed
     # ...
 
